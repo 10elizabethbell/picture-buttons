@@ -120,7 +120,12 @@ nine or fewer choices so it stays calm and fits on one screen.
 
 - Pictures are emoji, so they look slightly different on Apple, Android and Windows.
 - Speech uses the device's built-in English voice. It works offline once the page has loaded.
-- Nothing is stored or sent anywhere. There are no accounts and no tracking.
+- **Analytics:** visits are counted with Google Analytics, loaded through Google Tag
+  Manager (container `GTM-T6F5JB6T`, in the `<head>` of `index.html`). The page only
+  loads the container; which tags fire is set up in Tag Manager. Nothing a family adds is
+  sent with it: photos, words, kids' names and messages stay on the device. The site
+  still works if the tag is blocked.
+- There are no accounts.
 - The code avoids newer JavaScript so that it runs on older hand-me-down tablets.
 - This is a communication aid. It does not replace a speech-language pathologist.
 
