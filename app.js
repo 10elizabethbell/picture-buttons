@@ -138,8 +138,11 @@ var SUGGEST = {
 };
 
 var NEUTRAL = '#5b6470';
-var STORE_KEY = 'pictureButtons.v2';
-var OLD_STORE_KEY = 'pictureButtons.custom.v1'; // added buttons only, before hiding existed
+var PROFILES_KEY = 'pictureButtons.profiles'; // { current: id, list: [{ id, name, avatar }] }
+var BOARD_PREFIX = 'pictureButtons.board.'; // + kid id: that kid's added/hidden/order
+var V2_KEY = 'pictureButtons.v2'; // one board, before kids existed
+var V1_KEY = 'pictureButtons.custom.v1'; // added buttons only, before hiding existed
+var AVATARS = ['🧒', '👧', '👦', '👶', '👧🏽', '👦🏾', '🧒🏻', '🐶', '🐱', '🦊', '🐻', '🐼', '🐸', '🦄', '🦖', '🚀', '⭐', '🌈'];
 
 // Every built-in tile gets a colour, the page it lives on, and a key that is stable
 // across releases so hiding it can be remembered.
@@ -163,7 +166,8 @@ HOME.forEach(function (tile) {
 var picks = [];
 var cameFromHome = false;
 var editing = false;
-var state = loadState();
+var profiles = loadProfiles();
+var state = loadState(profiles.current);
 var undoStack = []; // earlier versions of `state`, newest last, as JSON
 var view = document.getElementById('view');
 var sentenceEl = document.getElementById('sentence');
@@ -235,19 +239,47 @@ function emptyState() {
   return { added: {}, hidden: {}, order: {} };
 }
 
-function loadState() {
+// The kids on this device. The first time, there's one kid holding any changes made
+// before kids existed.
+function loadProfiles() {
+  var p = null;
+  try { p = JSON.parse(window.localStorage.getItem(PROFILES_KEY) || 'null'); } catch (e) { /* unreadable */ }
+  if (p && p.list && p.list.length) {
+    if (!findKid(p, p.current)) p.current = p.list[0].id;
+    return p;
+  }
+  p = { current: 'k1', list: [{ id: 'k1', name: 'Kid 1', avatar: AVATARS[0] }] };
+  try {
+    var v2 = window.localStorage.getItem(V2_KEY);
+    var v1 = window.localStorage.getItem(V1_KEY);
+    if (v2) window.localStorage.setItem(BOARD_PREFIX + 'k1', v2);
+    else if (v1) window.localStorage.setItem(BOARD_PREFIX + 'k1', JSON.stringify({ added: JSON.parse(v1) || {} }));
+    window.localStorage.setItem(PROFILES_KEY, JSON.stringify(p));
+    window.localStorage.removeItem(V2_KEY);
+    window.localStorage.removeItem(V1_KEY);
+  } catch (e) { /* storage blocked: kids last until the page closes */ }
+  return p;
+}
+
+function saveProfiles() {
+  try { window.localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); } catch (e) { /* blocked */ }
+}
+
+function findKid(p, id) {
+  for (var i = 0; i < p.list.length; i++) if (p.list[i].id === id) return p.list[i];
+  return null;
+}
+
+function currentKid() { return findKid(profiles, profiles.current); }
+
+// One kid's board: the buttons added, hidden and moved for them.
+function loadState(kidId) {
   var s = emptyState();
   try {
-    var raw = window.localStorage.getItem(STORE_KEY);
-    if (raw) {
-      var data = JSON.parse(raw);
-      if (data && data.added) s.added = data.added;
-      if (data && data.hidden) s.hidden = data.hidden;
-      if (data && data.order) s.order = data.order;
-    } else {
-      var old = window.localStorage.getItem(OLD_STORE_KEY);
-      if (old) s.added = JSON.parse(old) || {};
-    }
+    var data = JSON.parse(window.localStorage.getItem(BOARD_PREFIX + kidId) || 'null');
+    if (data && data.added) s.added = data.added;
+    if (data && data.hidden) s.hidden = data.hidden;
+    if (data && data.order) s.order = data.order;
   } catch (e) { /* storage blocked or unreadable: start fresh */ }
   return s;
 }
@@ -262,8 +294,7 @@ function stateJSON() {
 // Returns false when the browser refuses (storage full or blocked).
 function saveState() {
   try {
-    window.localStorage.setItem(STORE_KEY, stateJSON());
-    window.localStorage.removeItem(OLD_STORE_KEY);
+    window.localStorage.setItem(BOARD_PREFIX + profiles.current, stateJSON());
     return true;
   } catch (e) {
     return false;
@@ -294,9 +325,11 @@ function undo() {
 }
 
 function resetAll() {
+  var who = profiles.list.length > 1 ? ' for ' + currentKid().name : '';
   var ok = window.confirm(
-    'Put every page back the way it started?\n\nButtons you added will be removed and hidden ' +
-    'buttons will come back. You can tap Undo straight after if you change your mind.'
+    'Put every page back the way it started' + who + '?\n\nButtons you added will be removed, ' +
+    'hidden buttons will come back and the order will be reset. You can tap Undo straight ' +
+    'after if you change your mind.'
   );
   if (!ok) return;
   remember();
@@ -965,6 +998,200 @@ document.getElementById('set-reset').addEventListener('click', function () {
 settingsDialog.addEventListener('click', function (e) {
   if (e.target === settingsDialog) closeSettings();
 });
+document.getElementById('set-kids').addEventListener('click', function () {
+  closeSettings();
+  openKids();
+});
+
+// ---------- kids: each has their own buttons ----------
+//
+// Choosing a kid swaps in their board (added, hidden and moved buttons). Anyone can
+// switch; adding, renaming and removing kids happens in edit mode, behind the code.
+
+var kidsDialog = document.getElementById('kids-dialog');
+var kidsList = document.getElementById('kids-list');
+var kidForm = document.getElementById('kid-form');
+var kidNameInput = document.getElementById('kid-name');
+var kidAvatarBox = document.getElementById('kid-avatars');
+var kidCopyRow = document.getElementById('kid-copy-row');
+var kidCopy = document.getElementById('kid-copy');
+var kidSave = document.getElementById('kid-save');
+var kidDraft = null;
+
+// Show whose board it is, and the switcher only once there's more than one kid.
+function updateKidUI() {
+  var kid = currentKid();
+  document.body.classList.toggle('multi-kid', profiles.list.length > 1);
+  Array.prototype.forEach.call(document.querySelectorAll('.kid-avatar'), function (s) {
+    s.textContent = kid.avatar;
+  });
+  document.getElementById('kid-btn').setAttribute('aria-label', kid.name + "'s buttons. Choose who's using this");
+  document.getElementById('edit-kid').setAttribute('aria-label', 'Editing ' + kid.name + "'s buttons. Choose a kid");
+}
+
+function switchKid(id) {
+  if (id !== profiles.current) {
+    profiles.current = id;
+    saveProfiles();
+    state = loadState(id);
+    undoStack = []; // Undo only steps back through this kid's changes
+    undoButton.disabled = true;
+    picks.length = 0;
+    renderStrip(false);
+    history.replaceState(null, '', location.pathname + location.search);
+    route();
+    var kid = currentKid();
+    toast(kid.avatar + ' ' + kid.name);
+  }
+  updateKidUI();
+}
+
+function openKids() {
+  renderKids();
+  kidsDialog.hidden = false;
+  document.body.classList.add('dialog-open');
+}
+
+function closeKids() {
+  kidsDialog.hidden = true;
+  document.body.classList.remove('dialog-open');
+}
+
+function renderKids() {
+  empty(kidsList);
+  document.getElementById('kids-title').textContent = editing ? 'Kids' : "Who's using this?";
+  profiles.list.forEach(function (kid) {
+    var card = el('div', 'kid-card');
+    var choose = el('button', 'kid-choose');
+    choose.type = 'button';
+    choose.setAttribute('aria-pressed', String(kid.id === profiles.current));
+    choose.appendChild(el('span', 'kid-face', kid.avatar));
+    choose.appendChild(el('span', 'kid-name', kid.name));
+    choose.addEventListener('click', function () {
+      switchKid(kid.id);
+      closeKids();
+    });
+    card.appendChild(choose);
+
+    if (editing) {
+      var tools = el('div', 'kid-tools');
+      var rename = el('button', 'kid-tool', 'Change');
+      rename.type = 'button';
+      rename.setAttribute('aria-label', 'Change ' + kid.name);
+      rename.addEventListener('click', function () { openKidForm(kid); });
+      tools.appendChild(rename);
+      if (profiles.list.length > 1) {
+        var remove = el('button', 'kid-tool danger', 'Remove');
+        remove.type = 'button';
+        remove.setAttribute('aria-label', 'Remove ' + kid.name);
+        remove.addEventListener('click', function () { removeKid(kid); });
+        tools.appendChild(remove);
+      }
+      card.appendChild(tools);
+    }
+    kidsList.appendChild(card);
+  });
+
+  if (editing) {
+    var add = el('button', 'kid-choose kid-add');
+    add.type = 'button';
+    add.appendChild(el('span', 'kid-face', '+'));
+    add.appendChild(el('span', 'kid-name', 'Add a kid'));
+    add.addEventListener('click', function () { openKidForm(null); });
+    kidsList.appendChild(add);
+  }
+}
+
+function removeKid(kid) {
+  var ok = window.confirm(
+    'Remove ' + kid.name + '?\n\nThe buttons added, hidden or moved for ' + kid.name +
+    " will be deleted from this device. This can't be undone."
+  );
+  if (!ok) return;
+  profiles.list = profiles.list.filter(function (k) { return k.id !== kid.id; });
+  try { window.localStorage.removeItem(BOARD_PREFIX + kid.id); } catch (e) { /* blocked */ }
+  saveProfiles();
+  if (profiles.current === kid.id) switchKid(profiles.list[0].id);
+  updateKidUI();
+  renderKids();
+}
+
+// kid = null to add a new one
+function openKidForm(kid) {
+  var used = profiles.list.map(function (k) { return k.avatar; });
+  var free = AVATARS.filter(function (a) { return used.indexOf(a) === -1; });
+  kidDraft = { id: kid ? kid.id : null, avatar: kid ? kid.avatar : (free[0] || AVATARS[0]) };
+  document.getElementById('kid-form-title').textContent = kid ? 'Change ' + kid.name : 'Add a kid';
+  kidNameInput.value = kid ? kid.name : '';
+  kidCopy.checked = false;
+  kidCopyRow.hidden = !!kid;
+  document.getElementById('kid-copy-name').textContent = currentKid().name;
+
+  empty(kidAvatarBox);
+  AVATARS.forEach(function (a) {
+    var b = el('button', 'suggest', a);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(a === kidDraft.avatar));
+    b.addEventListener('click', function () {
+      kidDraft.avatar = a;
+      Array.prototype.forEach.call(kidAvatarBox.children, function (x) {
+        x.setAttribute('aria-pressed', String(x.textContent === a));
+      });
+    });
+    kidAvatarBox.appendChild(b);
+  });
+
+  kidSave.disabled = !kidNameInput.value.trim();
+  kidForm.hidden = false;
+  kidNameInput.focus();
+}
+
+function closeKidForm() {
+  kidForm.hidden = true;
+  kidDraft = null;
+}
+
+kidNameInput.addEventListener('input', function () {
+  kidSave.disabled = !kidNameInput.value.trim();
+});
+
+kidSave.addEventListener('click', function () {
+  var name = kidNameInput.value.trim();
+  if (!name || !kidDraft) return;
+
+  if (kidDraft.id) {
+    var kid = findKid(profiles, kidDraft.id);
+    kid.name = name;
+    kid.avatar = kidDraft.avatar;
+    saveProfiles();
+    closeKidForm();
+    updateKidUI();
+    renderKids();
+    return;
+  }
+
+  var id = 'k' + Date.now().toString(36);
+  if (kidCopy.checked) {
+    try {
+      window.localStorage.setItem(BOARD_PREFIX + id, stateJSON());
+    } catch (e) {
+      window.alert("There isn't room on this device to copy those buttons. " + name + ' will start with the usual buttons.');
+    }
+  }
+  profiles.list.push({ id: id, name: name, avatar: kidDraft.avatar });
+  saveProfiles();
+  closeKidForm();
+  closeKids();
+  switchKid(id); // straight to the new kid's buttons, still in edit mode to set them up
+});
+
+document.getElementById('kid-cancel').addEventListener('click', closeKidForm);
+document.getElementById('kids-close').addEventListener('click', closeKids);
+document.getElementById('kid-btn').addEventListener('click', openKids);
+document.getElementById('edit-kid').addEventListener('click', openKids);
+kidsDialog.addEventListener('click', function (e) {
+  if (e.target === kidsDialog) closeKids();
+});
 
 // ---------- "Add a button" form ----------
 
@@ -1428,8 +1655,15 @@ document.addEventListener('keydown', function (e) {
     e.preventDefault();
     return;
   }
+  if (!kidForm.hidden && e.key === 'Enter' && e.target === kidNameInput) {
+    kidSave.click();
+    e.preventDefault();
+    return;
+  }
   if (e.key !== 'Escape' && e.key !== 'Esc') return;
-  if (!settingsDialog.hidden) closeSettings();
+  if (!kidForm.hidden) closeKidForm();
+  else if (!kidsDialog.hidden) closeKids();
+  else if (!settingsDialog.hidden) closeSettings();
   else if (!dialog.hidden) closeAdd();
   else if (editing) stopEditing();
 });
@@ -1454,5 +1688,6 @@ window.addEventListener('hashchange', route);
 
 // Browsers can restore checkbox state on reload, so start in step with it.
 document.body.classList.toggle('show-words', wordsBox.checked);
+updateKidUI();
 renderStrip(false);
 route();

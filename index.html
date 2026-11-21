@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Big picture buttons for showing how you feel and what you want.">
   <title>Picture Buttons</title>
-  <link rel="stylesheet" href="styles.css?v=f6b19262">
+  <link rel="stylesheet" href="styles.css?v=406beb05">
 </head>
 <body class="at-home">
 
   <header class="strip">
     <!-- Shown instead of the message strip while editing -->
     <div class="edit-toolbar">
+      <!-- whose buttons are being edited (only when there's more than one kid) -->
+      <button id="edit-kid" class="tool tool-icon kid-btn" type="button">
+        <span class="kid-avatar" aria-hidden="true">🧒</span>
+      </button>
       <button id="edit-add" class="tool tool-add" type="button">
         <span class="plus" aria-hidden="true">+</span> Add
       </button>
@@ -34,9 +38,15 @@
       <button id="say" class="btn btn-say" type="button" aria-label="Say my message">
         <span aria-hidden="true">🔊</span>
       </button>
-      <button id="edit-btn" class="btn edit-btn" type="button" aria-label="Edit the buttons">
-        <span aria-hidden="true">✏️</span>
-      </button>
+      <div class="side-stack">
+        <!-- who's using it (only when there's more than one kid) -->
+        <button id="kid-btn" class="btn kid-btn" type="button">
+          <span class="kid-avatar" aria-hidden="true">🧒</span>
+        </button>
+        <button id="edit-btn" class="btn edit-btn" type="button" aria-label="Edit the buttons">
+          <span aria-hidden="true">✏️</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -81,15 +91,51 @@
   <div id="settings-dialog" class="backdrop" hidden>
     <div class="dialog settings" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <h2 id="settings-title">Settings</h2>
+      <button id="set-kids" type="button" class="sheet-btn">
+        <span aria-hidden="true">👧</span> Kids: add, rename or remove
+      </button>
       <button id="set-code" type="button" class="sheet-btn">
         <span aria-hidden="true">🔑</span> Change the code
       </button>
       <button id="set-reset" type="button" class="sheet-btn sheet-danger">
         <span aria-hidden="true">🔄</span> Reset every page
       </button>
-      <p class="hint">Reset puts every page back the way it started. You can tap Undo straight after.</p>
+      <p class="hint">Reset puts every page back the way it started for the kid you're editing. You can tap Undo straight after.</p>
       <div class="dialog-actions">
         <button id="settings-close" type="button" class="action action-quiet">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Who's using this? Choosing a kid shows their own buttons.
+       In edit mode it also adds, renames and removes kids. -->
+  <div id="kids-dialog" class="backdrop" hidden>
+    <div class="dialog kids-dialog" role="dialog" aria-modal="true" aria-labelledby="kids-title">
+      <h2 id="kids-title">Who's using this?</h2>
+      <div id="kids-list" class="kids-list"></div>
+      <div class="dialog-actions">
+        <button id="kids-close" type="button" class="action action-quiet">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add or change a kid -->
+  <div id="kid-form" class="backdrop kid-form-backdrop" hidden>
+    <div class="dialog kid-form" role="dialog" aria-modal="true" aria-labelledby="kid-form-title">
+      <h2 id="kid-form-title">Add a kid</h2>
+      <label class="field">
+        Name
+        <input id="kid-name" type="text" maxlength="20" autocomplete="off">
+      </label>
+      <p class="step">Picture</p>
+      <div id="kid-avatars" class="emoji-suggest"></div>
+      <label id="kid-copy-row" class="toggle kid-copy">
+        <input id="kid-copy" type="checkbox">
+        Start with a copy of <span id="kid-copy-name"></span>'s buttons
+      </label>
+      <div class="dialog-actions">
+        <button id="kid-cancel" type="button" class="action action-quiet">Cancel</button>
+        <button id="kid-save" type="button" class="action action-go" disabled>Save</button>
       </div>
     </div>
   </div>
@@ -181,6 +227,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=d9414adc"></script>
+  <script src="app.js?v=71258579"></script>
 </body>
 </html>

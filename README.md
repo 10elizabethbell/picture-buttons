@@ -47,6 +47,25 @@ top strip becomes a toolbar:
 | **⚙️** | Settings: **Change the code**, or **Reset every page** back to how it started (buttons, hidden buttons and order). Undo works straight after a reset. |
 | **Done** | Back to the child's view. |
 
+### More than one kid
+
+Each kid can have their own buttons: what's added, hidden and moved is kept separately
+for each.
+
+- **Add kids** in edit mode: ⚙️ → **Kids** → **Add a kid**. Give them a name and a
+  picture. They can start with the usual buttons or with a copy of the current kid's.
+  The first kid is called "Kid 1" until you rename them with **Change**.
+- **Switch kids:** once there are two or more, the kid's picture appears above ✏️ in the
+  top strip. Tap it and choose a name. Switching doesn't need the code. It clears the
+  message and goes back to the home page.
+- **While editing**, the picture at the left of the toolbar shows whose buttons you're
+  changing. Tap it to switch to another kid's without entering the code again. Undo
+  steps back only through the current kid's changes, and Reset only resets the current
+  kid.
+- **Remove** a kid from the same Kids screen. Their buttons are deleted from the device.
+
+The code and **Show words** are shared by everyone on the device.
+
 **Forgot the code?** Tap *Forgot the code?* on the keypad and answer a multiplication
 question. You can then choose a new code, and nothing you added is lost. The code is a
 child lock to stop changes by accident, not a security feature. It's stored on the

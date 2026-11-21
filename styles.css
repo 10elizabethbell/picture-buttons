@@ -149,14 +149,35 @@ button {
 }
 .edit-btn:active { background: var(--soft-pressed); }
 
+/* Right-hand column: the kid's picture above ✏️ once there's more than one kid */
+.side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.side-stack .btn { flex: 1; }
+
+body:not(.multi-kid) .kid-btn { display: none; }
+.side-stack .kid-btn {
+  width: 3.3rem;
+  font-size: 1.45rem;
+  background: var(--soft);
+}
+.side-stack .kid-btn:active { background: var(--soft-pressed); }
+
 /* Phones: a little more room for the message, so three pictures fit per line */
 @media (max-width: 480px) {
   .btn-say { width: 4.4rem; font-size: 2.1rem; }
-  .edit-btn { width: 2.9rem; font-size: 1.3rem; }
+  .edit-btn,
+  .side-stack .kid-btn { width: 2.9rem; font-size: 1.3rem; }
   .chip { min-width: 3rem; padding: 0.15rem 0.3rem; }
   .chip .icon { font-size: 1.9rem; }
   .chip .collage { font-size: 0.9rem; }
   .clear-btn { width: 2.3rem; height: 2.3rem; }
+  /* keep the edit toolbar (kid, Add, Undo, ⚙️, Done) on one line */
+  .edit-toolbar .tool { padding: 0.65rem 0.7rem; font-size: 1rem; }
+  .edit-toolbar .tool-icon { padding: 0.55rem 0.6rem; font-size: 1.3rem; }
+  body.editing .edit-toolbar { gap: 0.4rem; }
 }
 
 /* ---------- Page area ---------- */
@@ -763,6 +784,60 @@ button.file-btn { width: 100%; }
 .sheet-btn:active { background: var(--soft-pressed); }
 .sheet-danger { color: #a61e1e; }
 
+/* ---------- Kids ---------- */
+.kids-dialog { max-width: 480px; }
+
+.kids-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.kid-choose {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.9rem 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--soft);
+  border: 3px solid transparent;
+  border-radius: 18px;
+}
+.kid-choose:active { background: var(--soft-pressed); }
+.kid-choose[aria-pressed="true"] { background: #fff; border-color: var(--slate); }
+.kid-face { font-size: 3rem; line-height: 1.1; }
+.kid-name { overflow-wrap: anywhere; text-align: center; }
+
+.kid-add { background: none; border: 3px dashed var(--line-strong); color: var(--slate); }
+.kid-add .kid-face { font-weight: 400; }
+
+.kid-tools {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+.kid-tool {
+  min-width: 0;
+  padding: 0.45rem 0.2rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--slate);
+  background: #fff;
+  border: 2px solid var(--line-strong);
+  border-radius: 10px;
+}
+.kid-tool.danger { color: #a61e1e; }
+
+.kid-form-backdrop { z-index: 56; }
+.kid-form { max-width: 440px; }
+.kid-copy { display: block; margin: 0.25rem 0 1.1rem; font-weight: 700; color: var(--ink); }
+
 .toast {
   position: fixed;
   left: 50%;
@@ -821,6 +896,8 @@ footer {
 .tool:focus-visible,
 .delete-badge:focus-visible,
 .key:focus-visible,
+.kid-choose:focus-visible,
+.kid-tool:focus-visible,
 .zoom-btn:focus-visible,
 .crop-stage:focus-visible,
 .preview-edit:focus-visible,
