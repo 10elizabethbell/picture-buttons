@@ -414,7 +414,7 @@ function editButton() {
   b.type = 'button';
   b.appendChild(el('span', '', '✏️'));
   b.appendChild(document.createTextNode(' Edit'));
-  b.addEventListener('click', startEditing);
+  b.addEventListener('click', requestEdit);
   return b;
 }
 
@@ -531,8 +531,199 @@ document.getElementById('edit-add').addEventListener('click', function () {
   openAdd(page.id, page.color);
 });
 undoButton.addEventListener('click', undo);
-document.getElementById('edit-reset').addEventListener('click', resetAll);
 document.getElementById('edit-done').addEventListener('click', stopEditing);
+
+// A short message at the bottom of the screen.
+function toast(text) {
+  var t = el('div', 'toast', text);
+  t.setAttribute('role', 'status');
+  document.body.appendChild(t);
+  setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2200);
+}
+
+// ---------- the code that unlocks edit mode ----------
+//
+// A child lock, not security: anyone with the device and some know-how can get past it.
+// The code is kept in localStorage. If storage is blocked it lasts until the page closes.
+
+var PIN_KEY = 'pictureButtons.pin';
+var memoryPin = '';
+
+function getPin() {
+  try { return window.localStorage.getItem(PIN_KEY) || memoryPin; } catch (e) { return memoryPin; }
+}
+
+function setPin(code) {
+  memoryPin = code;
+  try { window.localStorage.setItem(PIN_KEY, code); } catch (e) { /* kept in memory instead */ }
+}
+
+var pinDialog = document.getElementById('pin-dialog');
+var pinTitle = document.getElementById('pin-title');
+var pinSub = document.getElementById('pin-sub');
+var pinDisplay = document.getElementById('pin-display');
+var pinMsg = document.getElementById('pin-msg');
+var pinOk = document.getElementById('pin-ok');
+var pinForgot = document.getElementById('pin-forgot');
+
+// mode: 'unlock' | 'create' | 'confirm' | 'gate' (the "forgot the code" question)
+var pin = { mode: null, entry: '', first: '', answer: 0, after: null };
+
+var PIN_TEXT = {
+  unlock: ['Enter your code', 'Needed to change the buttons.'],
+  create: ['Choose a 4-digit code', "You'll type it each time you tap Edit."],
+  confirm: ['Type the same code again', ''],
+  gate: ['Forgot the code?', ''],
+};
+
+// The Edit button: ask for the code, or have one chosen the very first time.
+function requestEdit() {
+  openPin(getPin() ? 'unlock' : 'create', startEditing);
+}
+
+// `after` runs once the code is entered correctly or a new one is saved.
+function openPin(mode, after) {
+  pin.after = after;
+  pin.first = '';
+  setPinMode(mode, '');
+  pinDialog.hidden = false;
+  document.body.classList.add('dialog-open');
+  pinDialog.querySelector('.key').focus();
+}
+
+function closePin() {
+  pinDialog.hidden = true;
+  document.body.classList.remove('dialog-open');
+  pin.mode = null;
+}
+
+function finishPin() {
+  var after = pin.after;
+  closePin();
+  if (after) after();
+}
+
+function setPinMode(mode, message) {
+  pin.mode = mode;
+  pin.entry = '';
+  pinTitle.textContent = PIN_TEXT[mode][0];
+  if (mode === 'gate') {
+    var a = 12 + Math.floor(Math.random() * 13); // 12 to 24
+    var b = 3 + Math.floor(Math.random() * 7); // 3 to 9
+    pin.answer = a * b;
+    pinSub.textContent = 'To choose a new code, answer this: what is ' + a + ' × ' + b + '?';
+  } else {
+    pinSub.textContent = PIN_TEXT[mode][1];
+  }
+  pinMsg.textContent = message || '';
+  pinOk.style.visibility = mode === 'gate' ? 'visible' : 'hidden';
+  pinForgot.hidden = mode !== 'unlock';
+  drawPin();
+}
+
+function drawPin() {
+  empty(pinDisplay);
+  if (pin.mode === 'gate') {
+    pinDisplay.appendChild(el('span', 'pin-answer', pin.entry || ' '));
+    return;
+  }
+  for (var i = 0; i < 4; i++) {
+    pinDisplay.appendChild(el('span', 'pin-dot' + (i < pin.entry.length ? ' filled' : '')));
+  }
+}
+
+function shakePin() {
+  pinDisplay.className = 'pin-display';
+  void pinDisplay.offsetWidth;
+  pinDisplay.className = 'pin-display shake';
+}
+
+function pinPress(key) {
+  if (!pin.mode) return;
+  if (key === 'back') {
+    pin.entry = pin.entry.slice(0, -1);
+    drawPin();
+    return;
+  }
+  if (key === 'ok') {
+    if (pin.mode === 'gate' && pin.entry) checkGate();
+    return;
+  }
+  var max = pin.mode === 'gate' ? 3 : 4;
+  if (pin.entry.length >= max) return;
+  pin.entry += key;
+  pinMsg.textContent = '';
+  drawPin();
+  if (pin.mode !== 'gate' && pin.entry.length === 4) setTimeout(pinComplete, 150); // let the 4th dot show
+}
+
+function pinComplete() {
+  var entry = pin.entry;
+  if (pin.mode === 'unlock') {
+    if (entry === getPin()) {
+      finishPin();
+    } else {
+      shakePin();
+      setPinMode('unlock', "That's not the code. Try again.");
+    }
+  } else if (pin.mode === 'create') {
+    pin.first = entry;
+    setPinMode('confirm', '');
+  } else if (pin.mode === 'confirm') {
+    if (entry !== pin.first) {
+      pin.first = '';
+      shakePin();
+      setPinMode('create', "Those didn't match. Choose a code again.");
+      return;
+    }
+    setPin(entry);
+    finishPin();
+  }
+}
+
+function checkGate() {
+  if (parseInt(pin.entry, 10) === pin.answer) {
+    setPinMode('create', ''); // then confirm, then on into edit mode
+  } else {
+    shakePin();
+    setPinMode('gate', 'Not quite. Try this one.');
+  }
+}
+
+Array.prototype.forEach.call(pinDialog.querySelectorAll('.key'), function (k) {
+  k.addEventListener('click', function () { pinPress(k.getAttribute('data-key')); });
+});
+pinForgot.addEventListener('click', function () { setPinMode('gate', ''); });
+document.getElementById('pin-cancel').addEventListener('click', closePin);
+
+// ---------- settings (⚙️ in edit mode) ----------
+
+var settingsDialog = document.getElementById('settings-dialog');
+
+function openSettings() {
+  settingsDialog.hidden = false;
+  document.body.classList.add('dialog-open');
+  document.getElementById('set-code').focus();
+}
+
+function closeSettings() {
+  settingsDialog.hidden = true;
+  document.body.classList.remove('dialog-open');
+}
+
+document.getElementById('edit-settings').addEventListener('click', openSettings);
+document.getElementById('settings-close').addEventListener('click', closeSettings);
+document.getElementById('set-code').addEventListener('click', function () {
+  closeSettings();
+  openPin('create', function () { toast('Code changed'); });
+});
+document.getElementById('set-reset').addEventListener('click', function () {
+  closeSettings();
+  resetAll();
+});
+settingsDialog.addEventListener('click', function (e) {
+  if (e.target === settingsDialog) closeSettings();
+});
 
 // ---------- "Add a button" form ----------
 
@@ -760,8 +951,19 @@ dialog.addEventListener('click', function (e) {
 });
 
 document.addEventListener('keydown', function (e) {
+  // typing the code on a keyboard
+  if (!pinDialog.hidden) {
+    if (/^[0-9]$/.test(e.key)) pinPress(e.key);
+    else if (e.key === 'Backspace') pinPress('back');
+    else if (e.key === 'Enter') pinPress('ok');
+    else if (e.key === 'Escape' || e.key === 'Esc') closePin();
+    else return;
+    e.preventDefault();
+    return;
+  }
   if (e.key !== 'Escape' && e.key !== 'Esc') return;
-  if (!dialog.hidden) closeAdd();
+  if (!settingsDialog.hidden) closeSettings();
+  else if (!dialog.hidden) closeAdd();
   else if (editing) stopEditing();
 });
 

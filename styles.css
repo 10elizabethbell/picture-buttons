@@ -303,7 +303,7 @@ main {
 .tool:disabled { opacity: 0.4; cursor: default; }
 .tool-add { color: #fff; background: var(--slate); }
 .tool-add .plus { font-size: 1.6rem; line-height: 1; margin-top: -0.1rem; }
-.tool-reset { color: #a61e1e; background: none; padding-left: 0.6rem; padding-right: 0.6rem; }
+.tool-icon { padding: 0.6rem 0.8rem; font-size: 1.35rem; }
 .tool-done { color: #fff; background: var(--go); }
 
 .tile-wrap {
@@ -525,6 +525,126 @@ button.file-btn { width: 100%; }
 .action-go { color: #fff; background: var(--go); }
 .action-go:disabled { opacity: 0.4; cursor: default; }
 
+/* ---------- Code pad ---------- */
+.pin-dialog { max-width: 360px; text-align: center; }
+.pin-dialog h2 { margin-bottom: 0.4rem; }
+
+.pin-sub { min-height: 1.3em; margin: 0 0 1rem; font-size: 1rem; color: #555; }
+
+.pin-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  height: 2.6rem;
+  margin-bottom: 0.4rem;
+}
+.pin-display.shake { animation: shake 0.4s; }
+
+.pin-dot {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 3px solid var(--slate);
+  border-radius: 50%;
+}
+.pin-dot.filled { background: var(--slate); }
+
+.pin-answer {
+  min-width: 5rem;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border-bottom: 3px solid var(--line-strong);
+}
+
+.pin-dialog .status { margin: 0 0 0.6rem; }
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  max-width: 17rem;
+  margin: 0.6rem auto 0;
+}
+
+.key {
+  height: 4rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: var(--soft);
+  border: none;
+  border-radius: 16px;
+}
+.key:active { background: var(--soft-pressed); }
+.key-ok { font-size: 1.15rem; color: #fff; background: var(--go); }
+.key-ok:active { background: var(--go-dark); }
+
+.pin-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.link-btn {
+  padding: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--slate);
+  text-decoration: underline;
+  background: none;
+  border: none;
+}
+.pin-links .link-btn:only-child,
+.pin-links [hidden] + .link-btn { margin-left: auto; }
+
+/* ---------- Settings ---------- */
+.settings { max-width: 420px; }
+
+.sheet-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  margin-bottom: 0.6rem;
+  padding: 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: left;
+  background: var(--soft);
+  border: none;
+  border-radius: 16px;
+}
+.sheet-btn:active { background: var(--soft-pressed); }
+.sheet-danger { color: #a61e1e; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 60;
+  transform: translateX(-50%);
+  padding: 0.8rem 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  background: #2b3038;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  animation: toast-in 0.2s ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
 /* ---------- Footer ---------- */
 footer {
   display: flex;
@@ -554,6 +674,9 @@ footer {
 .edit-btn:focus-visible,
 .tool:focus-visible,
 .delete-badge:focus-visible,
+.key:focus-visible,
+.link-btn:focus-visible,
+.sheet-btn:focus-visible,
 .kind:focus-visible,
 .suggest:focus-visible,
 .action:focus-visible,

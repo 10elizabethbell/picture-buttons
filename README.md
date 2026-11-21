@@ -32,16 +32,22 @@ Every tap speaks out loud and adds the picture to the strip at the top. For exam
 
 ## Changing the buttons (no coding)
 
-Tap **✏️ Edit** at the top right of any page. Like an iPhone home screen, every button
-starts to wiggle and gets a **✕** in its corner. The top strip becomes a toolbar:
+Tap **✏️ Edit** at the top right of any page and enter your 4-digit code. The first time,
+you choose the code instead. Like an iPhone home screen, every button then starts to
+wiggle and gets a **✕** in its corner. The top strip becomes a toolbar:
 
 | | |
 |---|---|
 | **+ Add** | Add a button to the page you're on. |
 | **✕** on a button | Remove it. This works on built-in buttons too; they're hidden, not deleted. |
 | **↩️ Undo** | Step back one change at a time. |
-| **Reset** | Put every page back the way it started. Undo works straight after. |
+| **⚙️** | Settings: **Change the code**, or **Reset every page** back to how it started. Undo works straight after a reset. |
 | **Done** | Back to the child's view. |
+
+**Forgot the code?** Tap *Forgot the code?* on the keypad and answer a multiplication
+question. You can then choose a new code, and nothing you added is lost. The code is a
+child lock to stop changes by accident, not a security feature. It's stored on the
+device, so don't reuse a PIN you use for anything else.
 
 While editing, tapping a button doesn't speak. Tapping a colourful folder still opens it,
 so you can change the buttons inside. Changes save as you go. The Undo history lasts
