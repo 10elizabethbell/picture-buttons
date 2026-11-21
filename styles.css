@@ -249,60 +249,103 @@ main {
 }
 .extras .icon { font-size: 2.6rem; }
 
-/* ---------- Grown-up edit mode ---------- */
-.edit-bar {
+/* ---------- Edit button (top right of every page) ---------- */
+.page-tools {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.6rem 0.6rem 0.6rem 1rem;
-  font-size: 1.05rem;
-  background: #fff;
-  border: 3px dashed var(--line-strong);
-  border-radius: 16px;
+  justify-content: flex-end;
+  margin-bottom: 0.4rem;
 }
 
-.edit-done {
+.edit-btn {
   flex: 0 0 auto;
-  padding: 0.6rem 1.2rem;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #fff;
-  background: var(--slate);
-  border: none;
-  border-radius: 12px;
+  color: var(--slate);
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
 }
 
-.tile-wrap { position: relative; display: flex; }
-.tile-wrap > .tile { flex: 1; min-width: 0; }
+/* ---------- Edit mode: iPhone-style wiggle ---------- */
+.edit-toolbar { display: none; }
 
-.remove-btn {
+.editing .sentence,
+.editing .controls { display: none; }
+
+.editing .edit-toolbar {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 5.2rem;
+}
+
+.toolbar-spacer { flex: 1; }
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.7rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--soft);
+  border: none;
+  border-radius: 14px;
+}
+.tool:disabled { opacity: 0.4; cursor: default; }
+.tool-add { color: #fff; background: var(--slate); }
+.tool-add .plus { font-size: 1.6rem; line-height: 1; margin-top: -0.1rem; }
+.tool-reset { color: #a61e1e; background: none; padding-left: 0.6rem; padding-right: 0.6rem; }
+.tool-done { color: #fff; background: var(--go); }
+
+.tile-wrap {
+  position: relative;
+  display: flex;
+  animation: wiggle 0.28s ease-in-out infinite alternate;
+}
+.tile-wrap > .tile { flex: 1; min-width: 0; }
+.extras .tile-wrap { flex: 0 1 7.5rem; }
+
+@keyframes wiggle {
+  from { transform: rotate(-1.4deg); }
+  to { transform: rotate(1.4deg); }
+}
+
+.delete-badge {
   position: absolute;
-  top: -12px;
-  left: -12px;
+  top: -11px;
+  left: -11px;
   z-index: 2;
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #fff;
-  background: #c92a2a;
+  background: #3a3f47;
   border: 3px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+/* bigger invisible touch area around the small ✕ */
+.delete-badge::after {
+  content: "";
+  position: absolute;
+  top: -8px; right: -8px; bottom: -8px; left: -8px;
 }
 
-.tile.add-tile {
-  background: transparent;
-  border-style: dashed;
-  box-shadow: none;
-}
-.tile.add-tile:active { transform: none; background: var(--t); }
-.add-tile .icon { font-size: clamp(2rem, 8vw, 3rem); opacity: 0.75; }
-.add-word { font-size: 1.05rem; font-weight: 700; color: var(--ink); }
+.just-added > .tile { animation: pop 0.4s ease-out; }
 
 /* Pictures for buttons added on this device */
 .icon .photo {
@@ -508,8 +551,9 @@ footer {
 .btn:focus-visible,
 .tile:focus-visible,
 .home-btn:focus-visible,
-.remove-btn:focus-visible,
-.edit-done:focus-visible,
+.edit-btn:focus-visible,
+.tool:focus-visible,
+.delete-badge:focus-visible,
 .kind:focus-visible,
 .suggest:focus-visible,
 .action:focus-visible,

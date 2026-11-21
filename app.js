@@ -14,7 +14,8 @@
 //   color  folder colour; everything inside the folder uses it
 //   strip  false = tapping the folder speaks but does not add a picture to the top strip
 //
-// Buttons that grown-ups add are kept in this browser's localStorage, per page.
+// Edit mode (the ✏️ Edit button) changes the board on this device only. Changes are kept
+// in localStorage as { added: {page: [tiles]}, hidden: {page: [tile keys]} }.
 //
 // Kept to old-browser-safe JavaScript on purpose: hand-me-down tablets are common.
 
@@ -135,11 +136,23 @@ var SUGGEST = {
 };
 
 var NEUTRAL = '#5b6470';
-var STORE_KEY = 'pictureButtons.custom.v1';
+var STORE_KEY = 'pictureButtons.v2';
+var OLD_STORE_KEY = 'pictureButtons.custom.v1'; // added buttons only, before hiding existed
 
-// Every tile gets a colour. Things inside a folder use the folder's colour.
+// Every built-in tile gets a colour, the page it lives on, and a key that is stable
+// across releases so hiding it can be remembered.
 HOME.forEach(function (tile) {
   if (!tile.color) tile.color = NEUTRAL;
+  tile.page = 'home';
+  tile.key = tile.id || tile.label;
+  (tile.items || []).forEach(function (child) {
+    child.page = tile.id;
+    child.key = child.label;
+  });
+  (tile.extras || []).forEach(function (child) {
+    child.page = tile.id;
+    child.key = 'x-' + child.label;
+  });
   (tile.items || []).concat(tile.extras || []).forEach(function (child) {
     if (!child.color) child.color = tile.color;
   });
@@ -147,11 +160,13 @@ HOME.forEach(function (tile) {
 
 var picks = [];
 var cameFromHome = false;
-var custom = loadCustom();
+var editing = false;
+var state = loadState();
+var undoStack = []; // earlier versions of `state`, newest last, as JSON
 var view = document.getElementById('view');
 var sentenceEl = document.getElementById('sentence');
 var wordsBox = document.getElementById('words');
-var editBox = document.getElementById('editing');
+var undoButton = document.getElementById('edit-undo');
 
 // ---------- helpers ----------
 
@@ -209,25 +224,36 @@ function colourise(node, color) {
   node.style.setProperty('--t', tint(color, 0.86));
 }
 
-// ---------- buttons added on this device ----------
+// ---------- saved changes: added buttons and hidden buttons ----------
 
-function loadCustom() {
+function loadState() {
+  var s = { added: {}, hidden: {} };
   try {
-    var data = JSON.parse(window.localStorage.getItem(STORE_KEY) || '{}');
-    return data && typeof data === 'object' ? data : {};
-  } catch (e) {
-    return {};
-  }
+    var raw = window.localStorage.getItem(STORE_KEY);
+    if (raw) {
+      var data = JSON.parse(raw);
+      if (data && data.added) s.added = data.added;
+      if (data && data.hidden) s.hidden = data.hidden;
+    } else {
+      var old = window.localStorage.getItem(OLD_STORE_KEY);
+      if (old) s.added = JSON.parse(old) || {};
+    }
+  } catch (e) { /* storage blocked or unreadable: start fresh */ }
+  return s;
+}
+
+// colour, page, key and the custom flag are worked out again whenever a page is drawn
+function stateJSON() {
+  return JSON.stringify(state, function (k, v) {
+    return k === 'color' || k === 'page' || k === 'custom' || k === 'key' ? undefined : v;
+  });
 }
 
 // Returns false when the browser refuses (storage full or blocked).
-function saveCustom() {
+function saveState() {
   try {
-    var json = JSON.stringify(custom, function (key, value) {
-      // colour, page and the custom flag are worked out again when the page is drawn
-      return key === 'color' || key === 'page' || key === 'custom' ? undefined : value;
-    });
-    window.localStorage.setItem(STORE_KEY, json);
+    window.localStorage.setItem(STORE_KEY, stateJSON());
+    window.localStorage.removeItem(OLD_STORE_KEY);
     return true;
   } catch (e) {
     return false;
@@ -241,22 +267,59 @@ function keepStorage() {
   } catch (e) { /* not supported */ }
 }
 
-// The built-in tiles for a page, followed by the ones added on this device.
+// Call before every change so Undo can step back to it.
+function remember() {
+  undoStack.push(stateJSON());
+  if (undoStack.length > 50) undoStack.shift();
+  undoButton.disabled = false;
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  state = JSON.parse(undoStack.pop());
+  undoButton.disabled = !undoStack.length;
+  saveState();
+  render();
+}
+
+function resetAll() {
+  var ok = window.confirm(
+    'Put every page back the way it started?\n\nButtons you added will be removed and hidden ' +
+    'buttons will come back. You can tap Undo straight after if you change your mind.'
+  );
+  if (!ok) return;
+  remember();
+  state = { added: {}, hidden: {} };
+  saveState();
+  render();
+}
+
+function isHidden(item) {
+  return (state.hidden[item.page] || []).indexOf(item.key) !== -1;
+}
+
+function removeTile(item) {
+  remember();
+  if (item.custom) {
+    state.added[item.page] = (state.added[item.page] || []).filter(function (c) { return c.id !== item.id; });
+  } else {
+    (state.hidden[item.page] || (state.hidden[item.page] = [])).push(item.key);
+  }
+  saveState();
+  render();
+}
+
+// The built-in tiles for a page that aren't hidden, followed by the ones added on this device.
 function pageItems(pageId, builtIn, color) {
-  var mine = custom[pageId] || [];
+  var shown = builtIn.filter(function (t) { return !isHidden(t); });
+  var mine = state.added[pageId] || [];
   mine.forEach(function (item) {
     item.color = color;
     item.page = pageId;
+    item.key = item.id;
     item.custom = true;
   });
-  return builtIn.concat(mine);
-}
-
-function removeCustom(item) {
-  if (!window.confirm('Remove this button?')) return;
-  custom[item.page] = (custom[item.page] || []).filter(function (c) { return c.id !== item.id; });
-  saveCustom();
-  render();
+  return shown.concat(mine);
 }
 
 // ---------- the top strip ----------
@@ -295,6 +358,7 @@ function makeTile(item) {
   var btn = el('button', 'tile');
   btn.type = 'button';
   btn.setAttribute('aria-label', item.say);
+  btn.setAttribute('data-key', item.key);
   colourise(btn, item.color);
   btn.appendChild(picture(item));
   if (item.label) btn.appendChild(el('span', 'word', item.label));
@@ -302,14 +366,17 @@ function makeTile(item) {
   if (item.items) {
     btn.className += ' folder';
     btn.addEventListener('click', function () {
-      var last = picks[picks.length - 1];
-      if (item.strip !== false && last !== item) addPick(item);
-      speak(item.say);
+      if (!editing) {
+        var last = picks[picks.length - 1];
+        if (item.strip !== false && last !== item) addPick(item);
+        speak(item.say);
+      }
       cameFromHome = true;
-      location.hash = item.id;
+      location.hash = item.id; // folders still open while editing, to edit inside them
     });
   } else {
     btn.addEventListener('click', function () {
+      if (editing) return; // like iPhone: tapping a wiggling button does nothing
       addPick(item);
       speak(item.say);
     });
@@ -317,54 +384,38 @@ function makeTile(item) {
   return btn;
 }
 
-// A tile with a red ✕ in the corner, shown in edit mode for buttons added on this device.
-function withRemove(tile, item) {
+// While editing, each tile wiggles out of step with its neighbours and has a ✕ in the corner.
+function wiggle(tile, item) {
   var wrap = el('div', 'tile-wrap');
-  var x = el('button', 'remove-btn', '✕');
+  wrap.style.animationDelay = (-Math.random() * 0.3).toFixed(2) + 's';
+  wrap.style.animationDuration = (0.24 + Math.random() * 0.08).toFixed(2) + 's';
+
+  var x = el('button', 'delete-badge', '✕');
   x.type = 'button';
-  x.setAttribute('aria-label', 'Remove this button: ' + item.say);
-  x.addEventListener('click', function () { removeCustom(item); });
+  x.setAttribute('aria-label', 'Remove ' + (item.label || item.say));
+  x.addEventListener('click', function () { removeTile(item); });
+
   wrap.appendChild(tile);
   wrap.appendChild(x);
   return wrap;
 }
 
-function makeAddTile(pageId, color) {
-  var btn = el('button', 'tile add-tile');
-  btn.type = 'button';
-  btn.setAttribute('aria-label', 'Add a button');
-  colourise(btn, color);
-  var icon = el('span', 'icon', '➕');
-  icon.setAttribute('aria-hidden', 'true');
-  btn.appendChild(icon);
-  btn.appendChild(el('span', 'add-word', 'Add'));
-  btn.addEventListener('click', function () { openAdd(pageId, color); });
-  return btn;
-}
-
-// pageId is set for a page's main grid, which is where added buttons and ➕ go.
-function grid(items, className, pageId, color) {
-  var editing = editBox.checked;
+function grid(items, className) {
   var box = el('div', className);
   items.forEach(function (item) {
     var tile = makeTile(item);
-    box.appendChild(editing && item.custom ? withRemove(tile, item) : tile);
+    box.appendChild(editing ? wiggle(tile, item) : tile);
   });
-  if (pageId && editing) box.appendChild(makeAddTile(pageId, color));
   return box;
 }
 
-function editBar() {
-  var bar = el('div', 'edit-bar');
-  bar.appendChild(el('span', '', 'Tap ➕ to add a button. Tap ✕ to remove one you added.'));
-  var done = el('button', 'edit-done', 'Done');
-  done.type = 'button';
-  done.addEventListener('click', function () {
-    editBox.checked = false;
-    render();
-  });
-  bar.appendChild(done);
-  return bar;
+function editButton() {
+  var b = el('button', 'edit-btn');
+  b.type = 'button';
+  b.appendChild(el('span', '', '✏️'));
+  b.appendChild(document.createTextNode(' Edit'));
+  b.addEventListener('click', startEditing);
+  return b;
 }
 
 // ---------- pages ----------
@@ -374,8 +425,12 @@ function showHome() {
   document.body.classList.remove('in-folder');
   document.body.style.backgroundColor = '';
   empty(view);
-  if (editBox.checked) view.appendChild(editBar());
-  view.appendChild(grid(pageItems('home', HOME, NEUTRAL), 'grid home-grid', 'home', NEUTRAL));
+  if (!editing) {
+    var tools = el('div', 'page-tools');
+    tools.appendChild(editButton());
+    view.appendChild(tools);
+  }
+  view.appendChild(grid(pageItems('home', HOME, NEUTRAL), 'grid home-grid'));
 }
 
 function showFolder(folder) {
@@ -383,7 +438,6 @@ function showFolder(folder) {
   document.body.classList.remove('at-home');
   document.body.style.backgroundColor = tint(folder.color, 0.9);
   empty(view);
-  if (editBox.checked) view.appendChild(editBar());
 
   var nav = el('div', 'nav');
   var home = el('button', 'home-btn');
@@ -399,20 +453,27 @@ function showFolder(folder) {
 
   nav.appendChild(home);
   nav.appendChild(here);
+  if (!editing) nav.appendChild(editButton());
   view.appendChild(nav);
-  view.appendChild(grid(pageItems(folder.id, folder.items, folder.color), 'grid', folder.id, folder.color));
+  view.appendChild(grid(pageItems(folder.id, folder.items, folder.color), 'grid'));
 
-  if (folder.extras) view.appendChild(grid(folder.extras, 'extras'));
+  var extras = (folder.extras || []).filter(function (t) { return !isHidden(t); });
+  if (extras.length) view.appendChild(grid(extras, 'extras'));
 }
 
 function findFolder(id) {
   for (var i = 0; i < HOME.length; i++) {
-    if (HOME[i].id === id && HOME[i].items) return HOME[i];
+    if (HOME[i].id === id && HOME[i].items && !isHidden(HOME[i])) return HOME[i];
   }
   return null;
 }
 
-// Draw the current page in place (after adding/removing buttons or toggling edit mode).
+function currentPage() {
+  var folder = findFolder(location.hash.slice(1));
+  return folder ? { id: folder.id, color: folder.color } : { id: 'home', color: NEUTRAL };
+}
+
+// Draw the current page in place (after a change, or entering/leaving edit mode).
 function render() {
   var folder = findFolder(location.hash.slice(1));
   if (folder) showFolder(folder);
@@ -440,6 +501,38 @@ function goHome() {
     route();
   }
 }
+
+// ---------- edit mode ----------
+
+function startEditing() {
+  editing = true;
+  document.body.classList.add('editing');
+  render();
+  document.getElementById('edit-done').focus({ preventScroll: true });
+}
+
+function stopEditing() {
+  editing = false;
+  document.body.classList.remove('editing');
+  render();
+}
+
+// Scroll a newly added button into view and make it pop.
+function showNewTile(key) {
+  var tile = view.querySelector('[data-key="' + key + '"]');
+  if (!tile) return;
+  var target = tile.parentNode.className === 'tile-wrap' ? tile.parentNode : tile;
+  if (target.scrollIntoView) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  target.className += ' just-added';
+}
+
+document.getElementById('edit-add').addEventListener('click', function () {
+  var page = currentPage();
+  openAdd(page.id, page.color);
+});
+undoButton.addEventListener('click', undo);
+document.getElementById('edit-reset').addEventListener('click', resetAll);
+document.getElementById('edit-done').addEventListener('click', stopEditing);
 
 // ---------- "Add a button" form ----------
 
@@ -566,16 +659,6 @@ function readPhoto(file, done) {
   reader.readAsDataURL(file);
 }
 
-kindButtons.forEach(function (b) {
-  b.addEventListener('click', function () { setKind(b.getAttribute('data-kind')); });
-});
-
-emojiInput.addEventListener('input', function () {
-  draft.icon = emojiInput.value.trim();
-  markSuggestion();
-  updatePreview();
-});
-
 // Use a picture from the file picker, the Paste button or Ctrl/⌘+V.
 function usePhoto(blob) {
   photoStatus.textContent = '';
@@ -589,6 +672,16 @@ function usePhoto(blob) {
     setKind('photo'); // a pasted picture switches the form to Photo
   });
 }
+
+kindButtons.forEach(function (b) {
+  b.addEventListener('click', function () { setKind(b.getAttribute('data-kind')); });
+});
+
+emojiInput.addEventListener('input', function () {
+  draft.icon = emojiInput.value.trim();
+  markSuggestion();
+  updatePreview();
+});
 
 photoInput.addEventListener('change', function () {
   var file = photoInput.files && photoInput.files[0];
@@ -644,16 +737,20 @@ sayInput.addEventListener('input', updatePreview);
 saveButton.addEventListener('click', function () {
   var item = draftItem();
   if (!item) return;
-  var list = custom[draft.page] || (custom[draft.page] = []);
+  remember();
+  var list = state.added[draft.page] || (state.added[draft.page] = []);
   list.push(item);
-  if (!saveCustom()) {
+  if (!saveState()) {
     list.pop();
+    undoStack.pop();
+    undoButton.disabled = !undoStack.length;
     window.alert("There isn't room on this device to save that. Try a smaller photo, or remove some buttons you added.");
     return;
   }
   keepStorage();
   closeAdd();
   render();
+  showNewTile(item.id);
 });
 
 document.getElementById('add-cancel').addEventListener('click', closeAdd);
@@ -663,10 +760,12 @@ dialog.addEventListener('click', function (e) {
 });
 
 document.addEventListener('keydown', function (e) {
-  if (!dialog.hidden && (e.key === 'Escape' || e.key === 'Esc')) closeAdd();
+  if (e.key !== 'Escape' && e.key !== 'Esc') return;
+  if (!dialog.hidden) closeAdd();
+  else if (editing) stopEditing();
 });
 
-// ---------- controls ----------
+// ---------- message controls ----------
 
 document.getElementById('say').addEventListener('click', function () {
   speak(picks.map(function (t) { return t.say; }).join('. '));
@@ -685,11 +784,6 @@ document.getElementById('clear').addEventListener('click', function () {
 
 wordsBox.addEventListener('change', function () {
   document.body.classList.toggle('show-words', wordsBox.checked);
-});
-
-editBox.addEventListener('change', function () {
-  render();
-  if (editBox.checked) window.scrollTo(0, 0);
 });
 
 window.addEventListener('hashchange', route);

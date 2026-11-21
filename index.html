@@ -10,6 +10,19 @@
 <body class="at-home">
 
   <header class="strip">
+    <!-- Shown instead of the message strip while editing -->
+    <div class="edit-toolbar">
+      <button id="edit-add" class="tool tool-add" type="button">
+        <span class="plus" aria-hidden="true">+</span> Add
+      </button>
+      <button id="edit-undo" class="tool" type="button" disabled>
+        <span aria-hidden="true">↩️</span> Undo
+      </button>
+      <button id="edit-reset" class="tool tool-reset" type="button">Reset</button>
+      <span class="toolbar-spacer"></span>
+      <button id="edit-done" class="tool tool-done" type="button">Done</button>
+    </div>
+
     <div id="sentence" class="sentence"></div>
     <div class="controls">
       <button id="say" class="btn btn-say" type="button" aria-label="Say my message">
@@ -33,13 +46,9 @@
       <input id="words" type="checkbox">
       Show words
     </label>
-    <label class="toggle">
-      <input id="editing" type="checkbox">
-      Add or remove buttons
-    </label>
   </footer>
 
-  <!-- "Add a button" form. Only reachable in grown-up edit mode. -->
+  <!-- "Add a button" form. Only reachable from edit mode. -->
   <div id="add-dialog" class="backdrop" hidden>
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="add-title">
       <h2 id="add-title">Add a button</h2>

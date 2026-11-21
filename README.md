@@ -30,25 +30,39 @@ Every tap speaks out loud and adds the picture to the strip at the top. For exam
 - 🏠, or the phone's back button, goes back home. Each folder page is tinted its own
   colour, so the child can tell which page they're on.
 
-## Adding your own buttons (no coding)
+## Changing the buttons (no coding)
 
-1. At the bottom of any page, tick **Add or remove buttons**.
-2. Tap the dashed **➕ Add** tile at the end of that page.
-3. Choose what the button shows:
+Tap **✏️ Edit** at the top right of any page. Like an iPhone home screen, every button
+starts to wiggle and gets a **✕** in its corner. The top strip becomes a toolbar:
+
+| | |
+|---|---|
+| **+ Add** | Add a button to the page you're on. |
+| **✕** on a button | Remove it. This works on built-in buttons too; they're hidden, not deleted. |
+| **↩️ Undo** | Step back one change at a time. |
+| **Reset** | Put every page back the way it started. Undo works straight after. |
+| **Done** | Back to the child's view. |
+
+While editing, tapping a button doesn't speak. Tapping a colourful folder still opens it,
+so you can change the buttons inside. Changes save as you go. The Undo history lasts
+until the page is reloaded; Reset is always available.
+
+### Adding a button
+
+1. Tap **+ Add**.
+2. Choose what the button shows:
    - **Emoji**: pick from suggestions that suit the page, or type any emoji.
    - **Photo**: take one, choose one from the device, or paste a copied picture
      (the **📋 Paste** button, or Ctrl+V / ⌘V on a computer). It's cropped to a square
      and shrunk.
    - **Words**: short text shown on the button.
-4. Type what it should **say out loud**. For a Words button, you can leave this empty
+3. Type what it should **say out loud**. For a Words button, you can leave this empty
    and it says the words. Check the preview, then tap **Add button**.
 
-The new button goes on the page you added it from. In edit mode, a red **✕** removes
-a button you added; the built-in buttons can't be removed. Tap **Done** or untick the
-box to go back to the child's view, where ➕ and ✕ are hidden.
+The new button goes at the end of the page you added it from.
 
-**Where they're kept:** added buttons, photos included, are saved in this browser on
-this device. They are never uploaded. This means:
+**Where changes are kept:** added buttons (photos included) and hidden buttons are saved
+in this browser on this device. They are never uploaded. This means:
 
 - They don't appear on other devices or other browsers.
 - Clearing the browser's website data deletes them.
