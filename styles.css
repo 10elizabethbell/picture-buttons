@@ -7,8 +7,8 @@
   --soft-pressed: #d5dbe2;
   --ink: #222;
   --slate: #5b6470;
-  --go: #1f9d55;
-  --go-dark: #157341;
+  --go: #15803d;       /* 5:1 with white text */
+  --go-dark: #0f5f2d;
   --gap: 0.8rem;
 }
 
@@ -249,20 +249,256 @@ main {
 }
 .extras .icon { font-size: 2.6rem; }
 
+/* ---------- Grown-up edit mode ---------- */
+.edit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  font-size: 1.05rem;
+  background: #fff;
+  border: 3px dashed var(--line-strong);
+  border-radius: 16px;
+}
+
+.edit-done {
+  flex: 0 0 auto;
+  padding: 0.6rem 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--slate);
+  border: none;
+  border-radius: 12px;
+}
+
+.tile-wrap { position: relative; display: flex; }
+.tile-wrap > .tile { flex: 1; min-width: 0; }
+
+.remove-btn {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  z-index: 2;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  background: #c92a2a;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.tile.add-tile {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+.tile.add-tile:active { transform: none; background: var(--t); }
+.add-tile .icon { font-size: clamp(2rem, 8vw, 3rem); opacity: 0.75; }
+.add-word { font-size: 1.05rem; font-weight: 700; color: var(--ink); }
+
+/* Pictures for buttons added on this device */
+.icon .photo {
+  display: block;
+  width: 1.7em;
+  height: 1.7em;
+  object-fit: cover;
+  border-radius: 0.22em;
+}
+
+.icon .text-pic {
+  display: block;
+  max-width: 100%;
+  font-size: 0.4em;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.chip .photo { width: 1.15em; height: 1.15em; border-radius: 0.2em; }
+.chip .text-pic { font-size: 0.42em; max-width: 7rem; }
+
+/* ---------- "Add a button" form ---------- */
+[hidden] { display: none !important; }
+
+.dialog-open { overflow: hidden; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(24, 28, 36, 0.55);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 520px;
+  max-height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1.25rem;
+  font-size: 1.1rem;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.dialog h2 { margin: 0 0 0.75rem; font-size: 1.6rem; }
+
+.step { margin: 0.5rem 0; font-weight: 700; }
+
+.kinds {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kind {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.6rem 0.25rem;
+  font-weight: 700;
+  background: #fff;
+  border: 3px solid var(--line);
+  border-radius: 16px;
+}
+.kind span { font-size: 2rem; }
+.kind[aria-pressed="true"] { background: var(--soft); border-color: var(--slate); }
+
+.emoji-suggest {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3.1rem, 1fr));
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.suggest {
+  height: 3.1rem;
+  font-size: 1.8rem;
+  line-height: 1;
+  background: none;
+  border: 3px solid transparent;
+  border-radius: 12px;
+}
+.suggest[aria-pressed="true"] { background: var(--soft); border-color: var(--slate); }
+
+.field {
+  display: block;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.field input {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  font-weight: 400;
+  font-size: 1.25rem;
+  border: 3px solid var(--line-strong);
+  border-radius: 14px;
+}
+.field input:focus { outline: none; border-color: var(--slate); }
+
+.file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  font-weight: 700;
+  background: var(--soft);
+  border: 3px dashed var(--line-strong);
+  border-radius: 16px;
+  cursor: pointer;
+}
+.file-btn span { font-size: 1.8rem; }
+button.file-btn { width: 100%; }
+
+.photo-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.5rem;
+}
+
+.status { margin: 0.5rem 0 0; font-weight: 700; color: #a61e1e; }
+.status:empty { display: none; }
+
+.hint { margin: 0.5rem 0 1rem; font-size: 0.95rem; color: #555; }
+
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.preview-tile {
+  width: 8rem;
+  min-height: 8rem;
+  pointer-events: none;
+}
+.preview-tile .icon { font-size: 4rem; }
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.action {
+  padding: 0.8rem 1.4rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+}
+.action-quiet { background: var(--soft); }
+.action-go { color: #fff; background: var(--go); }
+.action-go:disabled { opacity: 0.4; cursor: default; }
+
 /* ---------- Footer ---------- */
 footer {
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem 1.75rem;
   padding: 1.5rem 1rem 2rem;
 }
 
-.words-toggle {
+.toggle {
   font-size: 1.05rem;
-  color: #666;
+  color: #555;
   cursor: pointer;
   user-select: none;
 }
 
-.words-toggle input {
+.toggle input {
   width: 1.2rem;
   height: 1.2rem;
   vertical-align: middle;
@@ -272,10 +508,16 @@ footer {
 .btn:focus-visible,
 .tile:focus-visible,
 .home-btn:focus-visible,
-.words-toggle input:focus-visible {
+.remove-btn:focus-visible,
+.edit-done:focus-visible,
+.kind:focus-visible,
+.suggest:focus-visible,
+.action:focus-visible,
+.toggle input:focus-visible {
   outline: 5px solid #111;
   outline-offset: 3px;
 }
+.file-btn:focus-within { outline: 5px solid #111; outline-offset: 3px; }
 
 @keyframes pop {
   from { transform: scale(0.6); opacity: 0.3; }

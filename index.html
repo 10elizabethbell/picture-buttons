@@ -29,11 +29,79 @@
   <main id="view"></main>
 
   <footer>
-    <label class="words-toggle">
+    <label class="toggle">
       <input id="words" type="checkbox">
-      Show words (for grown-ups)
+      Show words
+    </label>
+    <label class="toggle">
+      <input id="editing" type="checkbox">
+      Add or remove buttons
     </label>
   </footer>
+
+  <!-- "Add a button" form. Only reachable in grown-up edit mode. -->
+  <div id="add-dialog" class="backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="add-title">
+      <h2 id="add-title">Add a button</h2>
+
+      <p class="step">What should the button show?</p>
+      <div class="kinds">
+        <button type="button" class="kind" data-kind="emoji" aria-pressed="true">
+          <span aria-hidden="true">😀</span> Emoji
+        </button>
+        <button type="button" class="kind" data-kind="photo" aria-pressed="false">
+          <span aria-hidden="true">📷</span> Photo
+        </button>
+        <button type="button" class="kind" data-kind="text" aria-pressed="false">
+          <span aria-hidden="true">🔤</span> Words
+        </button>
+      </div>
+
+      <div class="pane" data-pane="emoji">
+        <div id="emoji-suggest" class="emoji-suggest"></div>
+        <label class="field">
+          Or type any emoji
+          <input id="emoji-input" type="text" maxlength="16" autocomplete="off">
+        </label>
+      </div>
+
+      <div class="pane" data-pane="photo" hidden>
+        <div class="photo-options">
+          <label class="file-btn">
+            <span aria-hidden="true">📷</span> Take or choose a photo
+            <input id="photo-input" class="visually-hidden" type="file" accept="image/*">
+          </label>
+          <button id="paste-btn" type="button" class="file-btn">
+            <span aria-hidden="true">📋</span> Paste a copied picture
+          </button>
+        </div>
+        <p id="photo-status" class="status" aria-live="polite"></p>
+        <p class="hint">On a computer you can also press Ctrl+V (⌘V on a Mac). Pictures stay on this device and are never uploaded.</p>
+      </div>
+
+      <div class="pane" data-pane="text" hidden>
+        <label class="field">
+          Words on the button
+          <input id="text-input" type="text" maxlength="24" autocomplete="off">
+        </label>
+      </div>
+
+      <label class="field">
+        What should it say out loud?
+        <input id="say-input" type="text" maxlength="80" autocomplete="off" placeholder="For example: Grandma">
+      </label>
+
+      <div class="preview-row">
+        <span class="step">Preview</span>
+        <div id="preview"></div>
+      </div>
+
+      <div class="dialog-actions">
+        <button id="add-cancel" type="button" class="action action-quiet">Cancel</button>
+        <button id="add-save" type="button" class="action action-go" disabled>Add button</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

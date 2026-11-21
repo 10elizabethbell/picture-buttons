@@ -30,7 +30,33 @@ Every tap speaks out loud and adds the picture to the strip at the top. For exam
 - 🏠, or the phone's back button, goes back home. Each folder page is tinted its own
   colour, so the child can tell which page they're on.
 
-## Editing the pictures and phrases
+## Adding your own buttons (no coding)
+
+1. At the bottom of any page, tick **Add or remove buttons**.
+2. Tap the dashed **➕ Add** tile at the end of that page.
+3. Choose what the button shows:
+   - **Emoji**: pick from suggestions that suit the page, or type any emoji.
+   - **Photo**: take one, choose one from the device, or paste a copied picture
+     (the **📋 Paste** button, or Ctrl+V / ⌘V on a computer). It's cropped to a square
+     and shrunk.
+   - **Words**: short text shown on the button.
+4. Type what it should **say out loud**. For a Words button, you can leave this empty
+   and it says the words. Check the preview, then tap **Add button**.
+
+The new button goes on the page you added it from. In edit mode, a red **✕** removes
+a button you added; the built-in buttons can't be removed. Tap **Done** or untick the
+box to go back to the child's view, where ➕ and ✕ are hidden.
+
+**Where they're kept:** added buttons, photos included, are saved in this browser on
+this device. They are never uploaded. This means:
+
+- They don't appear on other devices or other browsers.
+- Clearing the browser's website data deletes them.
+- On iPhone and iPad, Safari can clear a website's saved data if the site isn't opened
+  for about a week. Adding the site to the Home Screen (Share → Add to Home Screen)
+  protects it.
+
+## Editing the built-in pictures and phrases
 
 Everything lives in the `HOME` list at the top of `app.js`. A tile looks like this:
 
