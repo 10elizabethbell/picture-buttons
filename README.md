@@ -59,8 +59,10 @@ until the page is reloaded; Reset is always available.
 2. Choose what the button shows:
    - **Emoji**: pick from suggestions that suit the page, or type any emoji.
    - **Photo**: take one, choose one from the device, or paste a copied picture
-     (the **📋 Paste** button, or Ctrl+V / ⌘V on a computer). It's cropped to a square
-     and shrunk.
+     (the **📋 Paste** button, or Ctrl+V / ⌘V on a computer). It starts cropped to the
+     middle. **Tap the photo in the preview** (it has a ✂️ badge) to adjust it:
+     drag to move it, and pinch, scroll, use the slider or tap − / + to zoom.
+     **Reset** goes back to the middle. The saved button is a small 320px square.
    - **Words**: short text shown on the button.
 3. Type what it should **say out loud**. For a Words button, you can leave this empty
    and it says the words. Check the preview, then tap **Add button**.

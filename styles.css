@@ -511,6 +511,86 @@ button.file-btn { width: 100%; }
 }
 .preview-tile .icon { font-size: 4rem; }
 
+/* A photo preview is a button that opens the crop editor */
+.preview-edit {
+  position: relative;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.preview-badge {
+  position: absolute;
+  right: -12px;
+  bottom: -12px;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: #fff;
+  border: 3px solid var(--slate);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.preview-hint { margin-top: -0.3rem; }
+
+/* ---------- Photo crop editor ---------- */
+.crop-backdrop { z-index: 55; }
+.crop-dialog { max-width: 440px; }
+.crop-hint { margin-top: -0.25rem; }
+
+.crop-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #1d2127;
+  border-radius: 16px;
+  touch-action: none; /* our own drag and pinch, not page scrolling */
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.crop-stage:active { cursor: grabbing; }
+
+.crop-img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+/* the frame: everything outside it is dimmed */
+.crop-frame {
+  position: absolute;
+  z-index: 1;
+  border: 3px solid #fff;
+  border-radius: 13%;
+  box-shadow: 0 0 0 9999px rgba(29, 33, 39, 0.62);
+  pointer-events: none;
+}
+
+.zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+.zoom-row input { flex: 1; min-width: 0; height: 2rem; accent-color: var(--slate); }
+
+.zoom-btn {
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--soft);
+  border: none;
+  border-radius: 12px;
+}
+.zoom-btn:active { background: var(--soft-pressed); }
+
+.crop-reset { margin-right: auto; }
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -677,6 +757,9 @@ footer {
 .tool:focus-visible,
 .delete-badge:focus-visible,
 .key:focus-visible,
+.zoom-btn:focus-visible,
+.crop-stage:focus-visible,
+.preview-edit:focus-visible,
 .link-btn:focus-visible,
 .sheet-btn:focus-visible,
 .kind:focus-visible,

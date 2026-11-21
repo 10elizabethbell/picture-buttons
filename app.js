@@ -724,6 +724,7 @@ var sayInput = document.getElementById('say-input');
 var pasteButton = document.getElementById('paste-btn');
 var photoStatus = document.getElementById('photo-status');
 var previewBox = document.getElementById('preview');
+var previewHint = document.getElementById('preview-hint');
 var saveButton = document.getElementById('add-save');
 var draft = null;
 
@@ -803,52 +804,262 @@ function updatePreview() {
   if (draft.kind === 'photo') { if (draft.img) shown.img = draft.img; else shown.icon = '📷'; }
   if (draft.kind === 'text') shown.text = draft.text || 'Aa';
 
-  var tile = el('div', 'tile preview-tile');
+  // A photo in the preview is a button that opens the crop editor.
+  var editable = draft.kind === 'photo' && !!draft.source;
+  var tile = el(editable ? 'button' : 'div', 'tile preview-tile' + (editable ? ' preview-edit' : ''));
   colourise(tile, draft.color);
   tile.appendChild(picture(shown));
+  if (editable) {
+    tile.type = 'button';
+    tile.setAttribute('aria-label', 'Adjust the photo: zoom in or out, or move it');
+    var badge = el('span', 'preview-badge', '✂️');
+    badge.setAttribute('aria-hidden', 'true');
+    tile.appendChild(badge);
+    tile.addEventListener('click', openCrop);
+  }
+  previewHint.hidden = !editable;
   empty(previewBox);
   previewBox.appendChild(tile);
 
   saveButton.disabled = !draftItem();
 }
 
-// Shrink a photo to a 320px square (cropped from the middle) so it stores small.
-function readPhoto(file, done) {
+// Load a photo into a working copy (at most 1600px on its long side) that the crop
+// editor can zoom into. Only the final 320px crop is saved; this copy is thrown away.
+function loadSource(file, done) {
   var reader = new FileReader();
   reader.onerror = function () { done(null); };
   reader.onload = function () {
     var img = new Image();
     img.onerror = function () { done(null); };
     img.onload = function () {
-      var side = Math.min(img.width, img.height);
-      var size = Math.min(320, side);
+      var k = Math.min(1, 1600 / Math.max(img.width, img.height));
       var canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = Math.max(1, Math.round(img.width * k));
+      canvas.height = Math.max(1, Math.round(img.height * k));
       var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
-      done(canvas.toDataURL('image/jpeg', 0.8));
+      ctx.fillStyle = '#fff'; // see-through pictures get a white background
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      done(canvas);
     };
     img.src = reader.result;
   };
   reader.readAsDataURL(file);
 }
 
+// The biggest square in the middle of the photo, in the working copy's pixels.
+function centerCrop(src) {
+  var side = Math.min(src.width, src.height);
+  return { x: (src.width - side) / 2, y: (src.height - side) / 2, size: side };
+}
+
+// Cut the crop out as the 320px square JPEG that gets saved with the button.
+function renderCrop(src, c) {
+  var out = document.createElement('canvas');
+  out.width = 320;
+  out.height = 320;
+  var ctx = out.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, 320, 320);
+  ctx.drawImage(src, c.x, c.y, c.size, c.size, 0, 0, 320, 320);
+  return out.toDataURL('image/jpeg', 0.8);
+}
+
 // Use a picture from the file picker, the Paste button or Ctrl/⌘+V.
 function usePhoto(blob) {
   photoStatus.textContent = '';
-  readPhoto(blob, function (url) {
+  loadSource(blob, function (src) {
     if (!draft) return;
-    if (!url) {
+    if (!src) {
       photoStatus.textContent = "That picture couldn't be opened. Try a different one.";
       return;
     }
-    draft.img = url;
+    draft.source = src;
+    draft.crop = centerCrop(src);
+    draft.img = renderCrop(src, draft.crop);
     setKind('photo'); // a pasted picture switches the form to Photo
   });
 }
+
+// ---------- photo crop editor ----------
+//
+// A square frame sits over the photo; the photo moves and zooms underneath it.
+// Positions are in CSS pixels relative to the frame's top-left corner:
+//   F       frame size          s0  scale where the photo's short side just fills F
+//   z       zoom (1 = s0)       ox, oy  where the photo's top-left corner sits
+
+var cropDialog = document.getElementById('crop-dialog');
+var cropStage = document.getElementById('crop-stage');
+var cropFrame = document.getElementById('crop-frame');
+var cropZoom = document.getElementById('crop-zoom');
+var CROP_MARGIN = 28; // dimmed border of photo visible around the frame
+var crop = null;
+
+function cropScale() { return crop.s0 * crop.z; }
+
+// Keep the frame covered by the photo: no empty gaps at the edges.
+function clampCrop() {
+  var s = cropScale();
+  crop.ox = Math.min(0, Math.max(crop.F - crop.W * s, crop.ox));
+  crop.oy = Math.min(0, Math.max(crop.F - crop.H * s, crop.oy));
+}
+
+function drawCrop() {
+  var s = cropScale();
+  var st = crop.src.style;
+  st.left = (CROP_MARGIN + crop.ox) + 'px';
+  st.top = (CROP_MARGIN + crop.oy) + 'px';
+  st.width = (crop.W * s) + 'px';
+  st.height = (crop.H * s) + 'px';
+  cropZoom.value = crop.z;
+}
+
+// Zoom so the point (px, py) in the frame stays under the finger or pointer.
+function zoomCrop(z, px, py) {
+  if (px === undefined) { px = crop.F / 2; py = crop.F / 2; }
+  var before = cropScale();
+  crop.z = Math.max(1, Math.min(crop.zMax, z));
+  var after = cropScale();
+  crop.ox = px - (px - crop.ox) * after / before;
+  crop.oy = py - (py - crop.oy) * after / before;
+  clampCrop();
+  drawCrop();
+}
+
+function moveCrop(dx, dy) {
+  crop.ox += dx;
+  crop.oy += dy;
+  clampCrop();
+  drawCrop();
+}
+
+// The current crop as a square in the working copy's pixels.
+function currentCrop() {
+  var s = cropScale();
+  return { x: -crop.ox / s, y: -crop.oy / s, size: crop.F / s };
+}
+
+function setCrop(c) {
+  crop.z = Math.max(1, Math.min(crop.zMax, crop.F / c.size / crop.s0));
+  var s = cropScale();
+  crop.ox = -c.x * s;
+  crop.oy = -c.y * s;
+  clampCrop();
+  drawCrop();
+}
+
+// Size the stage and frame to the space available.
+function layoutCrop() {
+  var w = cropStage.clientWidth;
+  crop.F = w - 2 * CROP_MARGIN;
+  cropStage.style.height = w + 'px';
+  cropFrame.style.left = CROP_MARGIN + 'px';
+  cropFrame.style.top = CROP_MARGIN + 'px';
+  cropFrame.style.width = crop.F + 'px';
+  cropFrame.style.height = crop.F + 'px';
+  var short = Math.min(crop.W, crop.H);
+  crop.s0 = crop.F / short;
+  crop.zMax = Math.max(1, Math.min(6, short / 50)); // stop before it's a blur of pixels
+  cropZoom.max = crop.zMax;
+}
+
+function openCrop() {
+  if (!draft || !draft.source) return;
+  var src = draft.source;
+  crop = { src: src, W: src.width, H: src.height, pointers: {} };
+  src.className = 'crop-img';
+  cropStage.insertBefore(src, cropFrame);
+  cropDialog.hidden = false; // visible first, so it can be measured
+  layoutCrop();
+  setCrop(draft.crop);
+  cropStage.focus();
+}
+
+function closeCrop() {
+  cropDialog.hidden = true;
+  if (crop && crop.src.parentNode) crop.src.parentNode.removeChild(crop.src);
+  crop = null;
+}
+
+function applyCrop() {
+  draft.source = crop.src;
+  draft.crop = currentCrop();
+  draft.img = renderCrop(crop.src, draft.crop);
+  closeCrop();
+  updatePreview();
+}
+
+function stagePoint(e) {
+  var r = cropStage.getBoundingClientRect();
+  return { x: e.clientX - r.left - CROP_MARGIN, y: e.clientY - r.top - CROP_MARGIN };
+}
+
+function pinch(a, b) {
+  return {
+    d: Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)),
+    mx: (a.x + b.x) / 2,
+    my: (a.y + b.y) / 2,
+  };
+}
+
+// One finger or the mouse drags; two fingers pinch to zoom (and drag by their midpoint).
+cropStage.addEventListener('pointerdown', function (e) {
+  if (!crop) return;
+  try { cropStage.setPointerCapture(e.pointerId); } catch (err) { /* not every pointer can be captured */ }
+  crop.pointers[e.pointerId] = stagePoint(e);
+  e.preventDefault();
+});
+
+cropStage.addEventListener('pointermove', function (e) {
+  if (!crop || !crop.pointers[e.pointerId]) return;
+  var ids = Object.keys(crop.pointers);
+  var now = stagePoint(e);
+  if (ids.length === 1) {
+    var prev = crop.pointers[e.pointerId];
+    crop.pointers[e.pointerId] = now;
+    moveCrop(now.x - prev.x, now.y - prev.y);
+    return;
+  }
+  var before = pinch(crop.pointers[ids[0]], crop.pointers[ids[1]]);
+  crop.pointers[e.pointerId] = now;
+  var after = pinch(crop.pointers[ids[0]], crop.pointers[ids[1]]);
+  crop.ox += after.mx - before.mx;
+  crop.oy += after.my - before.my;
+  zoomCrop(before.d > 0 ? crop.z * after.d / before.d : crop.z, after.mx, after.my);
+});
+
+function endPointer(e) {
+  if (crop) delete crop.pointers[e.pointerId];
+}
+cropStage.addEventListener('pointerup', endPointer);
+cropStage.addEventListener('pointercancel', endPointer);
+
+// Mouse wheel or trackpad: zoom around the pointer.
+cropStage.addEventListener('wheel', function (e) {
+  if (!crop) return;
+  e.preventDefault();
+  var p = stagePoint(e);
+  zoomCrop(crop.z * Math.exp(-e.deltaY * 0.002), p.x, p.y);
+}, { passive: false });
+
+cropZoom.addEventListener('input', function () {
+  if (crop) zoomCrop(parseFloat(cropZoom.value));
+});
+document.getElementById('zoom-in').addEventListener('click', function () { if (crop) zoomCrop(crop.z * 1.25); });
+document.getElementById('zoom-out').addEventListener('click', function () { if (crop) zoomCrop(crop.z / 1.25); });
+document.getElementById('crop-reset').addEventListener('click', function () { if (crop) setCrop(centerCrop(crop.src)); });
+document.getElementById('crop-cancel').addEventListener('click', closeCrop);
+document.getElementById('crop-done').addEventListener('click', applyCrop);
+
+// Keep the same part of the photo in the frame if the screen turns or resizes.
+window.addEventListener('resize', function () {
+  if (!crop) return;
+  var c = currentCrop();
+  layoutCrop();
+  setCrop(c);
+});
 
 kindButtons.forEach(function (b) {
   b.addEventListener('click', function () { setKind(b.getAttribute('data-kind')); });
@@ -890,7 +1101,7 @@ pasteButton.addEventListener('click', function () {
 
 // Ctrl/⌘+V anywhere in the form. Only pictures are caught; pasting text still works normally.
 document.addEventListener('paste', function (e) {
-  if (dialog.hidden || !e.clipboardData || !e.clipboardData.items) return;
+  if (dialog.hidden || !cropDialog.hidden || !e.clipboardData || !e.clipboardData.items) return;
   var items = e.clipboardData.items;
   for (var i = 0; i < items.length; i++) {
     if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
@@ -937,6 +1148,21 @@ dialog.addEventListener('click', function (e) {
 });
 
 document.addEventListener('keydown', function (e) {
+  // the crop editor: Esc cancels; on the photo itself, arrows move, +/- zoom, Enter is Done
+  if (!cropDialog.hidden) {
+    if (e.key === 'Escape' || e.key === 'Esc') closeCrop();
+    else if (e.target !== cropStage) return;
+    else if (e.key === 'Enter') applyCrop();
+    else if (e.key === '+' || e.key === '=') zoomCrop(crop.z * 1.25);
+    else if (e.key === '-' || e.key === '_') zoomCrop(crop.z / 1.25);
+    else if (e.key === 'ArrowLeft') moveCrop(-12, 0);
+    else if (e.key === 'ArrowRight') moveCrop(12, 0);
+    else if (e.key === 'ArrowUp') moveCrop(0, -12);
+    else if (e.key === 'ArrowDown') moveCrop(0, 12);
+    else return;
+    e.preventDefault();
+    return;
+  }
   // typing the code on a keyboard
   if (!pinDialog.hidden) {
     if (/^[0-9]$/.test(e.key)) pinPress(e.key);
