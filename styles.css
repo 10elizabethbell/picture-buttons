@@ -123,7 +123,7 @@ main {
   width: 100%;
   max-width: 680px;
   margin: 0 auto;
-  padding: 1.1rem 1rem 1rem;
+  padding: 0.4rem 1rem 1rem;
 }
 
 .view.run { animation: fade 0.18s ease-out; }
@@ -249,12 +249,14 @@ main {
 }
 .extras .icon { font-size: 2.6rem; }
 
-/* ---------- Edit button (top right of every page) ---------- */
+/* ---------- Edit button: right-hand corner, under the speaker controls ---------- */
 .page-tools {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 0.4rem;
+  padding: 0.55rem 0.6rem 0;
 }
+/* hidden, not removed, while editing so the page doesn't jump */
+.editing .page-tools { visibility: hidden; }
 
 .edit-btn {
   flex: 0 0 auto;

@@ -103,3 +103,16 @@ nine or fewer choices so it stays calm and fits on one screen.
 ## Run locally
 
 Open `index.html` in a browser. No build step or install is needed.
+
+## Publishing changes
+
+GitHub Pages lets browsers keep files for 10 minutes. If `index.html` updates but a
+cached `app.js` doesn't, the page can come up blank. To prevent that, `index.html` links
+to `styles.css?v=…` and `app.js?v=…` with a fingerprint of each file's contents.
+
+**After editing `styles.css` or `app.js`, run `./stamp.sh` before committing.** To have
+git do it on every commit, install the hook once:
+
+```sh
+printf '#!/bin/sh\n./stamp.sh && git add index.html\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```

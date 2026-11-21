@@ -409,15 +409,6 @@ function grid(items, className) {
   return box;
 }
 
-function editButton() {
-  var b = el('button', 'edit-btn');
-  b.type = 'button';
-  b.appendChild(el('span', '', '✏️'));
-  b.appendChild(document.createTextNode(' Edit'));
-  b.addEventListener('click', requestEdit);
-  return b;
-}
-
 // ---------- pages ----------
 
 function showHome() {
@@ -425,11 +416,6 @@ function showHome() {
   document.body.classList.remove('in-folder');
   document.body.style.backgroundColor = '';
   empty(view);
-  if (!editing) {
-    var tools = el('div', 'page-tools');
-    tools.appendChild(editButton());
-    view.appendChild(tools);
-  }
   view.appendChild(grid(pageItems('home', HOME, NEUTRAL), 'grid home-grid'));
 }
 
@@ -453,7 +439,6 @@ function showFolder(folder) {
 
   nav.appendChild(home);
   nav.appendChild(here);
-  if (!editing) nav.appendChild(editButton());
   view.appendChild(nav);
   view.appendChild(grid(pageItems(folder.id, folder.items, folder.color), 'grid'));
 
@@ -532,6 +517,7 @@ document.getElementById('edit-add').addEventListener('click', function () {
 });
 undoButton.addEventListener('click', undo);
 document.getElementById('edit-done').addEventListener('click', stopEditing);
+document.getElementById('edit-btn').addEventListener('click', requestEdit);
 
 // A short message at the bottom of the screen.
 function toast(text) {
