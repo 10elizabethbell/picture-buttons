@@ -7,39 +7,26 @@
   <title>Picture Buttons</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="at-home">
 
   <header class="strip">
-    <div id="sentence" class="sentence" aria-live="polite" aria-label="Your picks"></div>
-    <div class="strip-actions">
-      <button id="say" class="btn btn-say" type="button" aria-label="Say it">
-        <span aria-hidden="true">🔊</span><span class="word"> Say it</span>
+    <div id="sentence" class="sentence"></div>
+    <div class="controls">
+      <button id="say" class="btn btn-say" type="button" aria-label="Say my message">
+        <span aria-hidden="true">🔊</span>
       </button>
-      <button id="undo" class="btn btn-small" type="button" aria-label="Remove last picture">
-        <span aria-hidden="true">⬅️</span>
-      </button>
-      <button id="clear" class="btn btn-small" type="button" aria-label="Clear all pictures">
-        <span aria-hidden="true">🗑️</span>
-      </button>
+      <div class="btn-stack">
+        <button id="undo" class="btn btn-small" type="button" aria-label="Take away the last picture">
+          <span aria-hidden="true">⬅️</span>
+        </button>
+        <button id="clear" class="btn btn-small" type="button" aria-label="Clear all pictures">
+          <span aria-hidden="true">🗑️</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <main>
-    <section class="group feelings" aria-labelledby="feel-title">
-      <h2 id="feel-title"><span aria-hidden="true">💭</span> <span class="word">I feel</span></h2>
-      <div id="feelings" class="grid"></div>
-    </section>
-
-    <section class="group wants" aria-labelledby="want-title">
-      <h2 id="want-title"><span aria-hidden="true">🎯</span> <span class="word">I want</span></h2>
-      <div id="wants" class="grid"></div>
-    </section>
-
-    <section class="group answers" aria-labelledby="ans-title">
-      <h2 id="ans-title"><span aria-hidden="true">💬</span> <span class="word">Answers</span></h2>
-      <div id="answers" class="grid"></div>
-    </section>
-  </main>
+  <main id="view"></main>
 
   <footer>
     <label class="words-toggle">
