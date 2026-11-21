@@ -53,21 +53,48 @@ button {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-.sentence {
+/* The dashed message box, with ✕ pinned at its right end */
+.sentence-box {
   flex: 1;
   min-width: 0;
   min-height: 5.2rem;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.5rem;
+  gap: 0.35rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.5rem;
   border: 3px dashed var(--line-strong);
   border-radius: 18px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
 }
-.sentence::-webkit-scrollbar { display: none; }
+
+/* Pictures wrap onto more lines rather than scrolling sideways, so dragging
+   never fights with scrolling and every picture stays visible. */
+.sentence {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  max-height: 8.6rem;
+  overflow-y: auto;
+}
+
+.clear-btn {
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--slate);
+  background: var(--soft);
+  border: none;
+  border-radius: 50%;
+}
+.clear-btn:active { background: var(--soft-pressed); }
 
 .placeholder { font-size: 2.2rem; opacity: 0.45; }
 
@@ -82,11 +109,18 @@ button {
   background: #fff;
   border: 3px solid var(--c, var(--slate));
   border-radius: 14px;
+  /* dragged by finger: no scrolling, text selection or long-press menu */
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 .chip .icon { font-size: 2.3rem; line-height: 1.1; }
 .chip .collage { font-size: 1.05rem; }
 .chip .word { font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
 .chip.new { animation: pop 0.25s ease-out; }
+.chip.leaving { opacity: 0.12; }
 
 .controls { display: flex; gap: 0.45rem; }
 
@@ -107,15 +141,23 @@ button {
 }
 .btn-say:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--go-dark); }
 
-.btn-stack { display: flex; flex-direction: column; gap: 0.4rem; }
-
-.btn-small {
-  flex: 1;
+/* Edit: slim and quiet next to the speaker */
+.edit-btn {
   width: 3.3rem;
-  font-size: 1.45rem;
+  font-size: 1.5rem;
   background: var(--soft);
 }
-.btn-small:active { background: var(--soft-pressed); }
+.edit-btn:active { background: var(--soft-pressed); }
+
+/* Phones: a little more room for the message, so three pictures fit per line */
+@media (max-width: 480px) {
+  .btn-say { width: 4.4rem; font-size: 2.1rem; }
+  .edit-btn { width: 2.9rem; font-size: 1.3rem; }
+  .chip { min-width: 3rem; padding: 0.15rem 0.3rem; }
+  .chip .icon { font-size: 1.9rem; }
+  .chip .collage { font-size: 0.9rem; }
+  .clear-btn { width: 2.3rem; height: 2.3rem; }
+}
 
 /* ---------- Page area ---------- */
 main {
@@ -249,35 +291,18 @@ main {
 }
 .extras .icon { font-size: 2.6rem; }
 
-/* ---------- Edit button: right-hand corner, under the speaker controls ---------- */
-.page-tools {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0.55rem 0.6rem 0;
-}
-/* hidden, not removed, while editing so the page doesn't jump */
-.editing .page-tools { visibility: hidden; }
-
-.edit-btn {
-  flex: 0 0 auto;
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.45rem 0.9rem;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--slate);
-  background: rgba(255, 255, 255, 0.75);
-  border: 2px solid var(--line-strong);
-  border-radius: 999px;
-}
-
 /* ---------- Edit mode: iPhone-style wiggle ---------- */
 .edit-toolbar { display: none; }
 
-.editing .sentence,
+.editing .sentence-box,
 .editing .controls { display: none; }
+
+/* long-press to pick up a tile: no text selection or long-press menu */
+.editing .tile {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
 .editing .edit-toolbar {
   flex: 1;
@@ -348,6 +373,45 @@ main {
 }
 
 .just-added > .tile { animation: pop 0.4s ease-out; }
+
+/* ---------- Dragging (message pictures, and tiles in edit mode) ---------- */
+/* the copy that follows the finger */
+.drag-ghost {
+  position: fixed;
+  z-index: 100;
+  margin: 0;
+  pointer-events: none;
+  opacity: 0.95;
+  transform: scale(1.08) rotate(2deg);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  transition: transform 0.12s, opacity 0.15s;
+}
+/* dragged out of the message box: it will be removed */
+.drag-ghost.remove { opacity: 0.7; transform: scale(0.85); }
+.drag-ghost.remove::after {
+  content: "✕";
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 1.8rem;
+  height: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  background: #c92a2a;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+.drag-ghost.poof { opacity: 0; transform: scale(0.3); transition: transform 0.18s, opacity 0.18s; }
+
+/* the gap left behind, which slides to where the item will land */
+.drag-slot { opacity: 0.3; }
+.tile-wrap.drag-slot { animation: none; }
+
+.photo { -webkit-user-drag: none; }
 
 /* Pictures for buttons added on this device */
 .icon .photo {

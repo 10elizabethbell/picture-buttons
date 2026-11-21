@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Big picture buttons for showing how you feel and what you want.">
   <title>Picture Buttons</title>
-  <link rel="stylesheet" href="styles.css?v=37e67205">
+  <link rel="stylesheet" href="styles.css?v=f6b19262">
 </head>
 <body class="at-home">
 
@@ -25,28 +25,20 @@
       <button id="edit-done" class="tool tool-done" type="button">Done</button>
     </div>
 
-    <div id="sentence" class="sentence"></div>
+    <!-- The message. Drag a picture out to remove it, or along to move it. -->
+    <div id="sentence-box" class="sentence-box">
+      <div id="sentence" class="sentence"></div>
+      <button id="clear" class="clear-btn" type="button" aria-label="Clear the message" hidden>✕</button>
+    </div>
     <div class="controls">
       <button id="say" class="btn btn-say" type="button" aria-label="Say my message">
         <span aria-hidden="true">🔊</span>
       </button>
-      <div class="btn-stack">
-        <button id="undo" class="btn btn-small" type="button" aria-label="Take away the last picture">
-          <span aria-hidden="true">⬅️</span>
-        </button>
-        <button id="clear" class="btn btn-small" type="button" aria-label="Clear all pictures">
-          <span aria-hidden="true">🗑️</span>
-        </button>
-      </div>
+      <button id="edit-btn" class="btn edit-btn" type="button" aria-label="Edit the buttons">
+        <span aria-hidden="true">✏️</span>
+      </button>
     </div>
   </header>
-
-  <!-- Right-hand corner, under the speaker controls -->
-  <div class="page-tools">
-    <button id="edit-btn" class="edit-btn" type="button">
-      <span aria-hidden="true">✏️</span> Edit
-    </button>
-  </div>
 
   <main id="view"></main>
 
@@ -189,6 +181,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=9317a36b"></script>
+  <script src="app.js?v=d9414adc"></script>
 </body>
 </html>

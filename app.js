@@ -15,7 +15,9 @@
 //   strip  false = tapping the folder speaks but does not add a picture to the top strip
 //
 // Edit mode (the ✏️ Edit button) changes the board on this device only. Changes are kept
-// in localStorage as { added: {page: [tiles]}, hidden: {page: [tile keys]} }.
+// in localStorage as { added: {page: [tiles]}, hidden: {page: [tile keys]},
+// order: {grid: [tile keys]} }. A grid is a page id, or "<page>:extras" for the small
+// round buttons under a folder's choices.
 //
 // Kept to old-browser-safe JavaScript on purpose: hand-me-down tablets are common.
 
@@ -165,6 +167,8 @@ var state = loadState();
 var undoStack = []; // earlier versions of `state`, newest last, as JSON
 var view = document.getElementById('view');
 var sentenceEl = document.getElementById('sentence');
+var sentenceBox = document.getElementById('sentence-box');
+var clearButton = document.getElementById('clear');
 var wordsBox = document.getElementById('words');
 var undoButton = document.getElementById('edit-undo');
 
@@ -204,6 +208,7 @@ function picture(item) {
     var img = el('img', 'photo');
     img.src = item.img;
     img.alt = '';
+    img.draggable = false; // our own dragging, not the browser's image drag
     icon.appendChild(img);
   } else if (item.text) {
     icon.appendChild(el('span', 'text-pic', item.text));
@@ -226,14 +231,19 @@ function colourise(node, color) {
 
 // ---------- saved changes: added buttons and hidden buttons ----------
 
+function emptyState() {
+  return { added: {}, hidden: {}, order: {} };
+}
+
 function loadState() {
-  var s = { added: {}, hidden: {} };
+  var s = emptyState();
   try {
     var raw = window.localStorage.getItem(STORE_KEY);
     if (raw) {
       var data = JSON.parse(raw);
       if (data && data.added) s.added = data.added;
       if (data && data.hidden) s.hidden = data.hidden;
+      if (data && data.order) s.order = data.order;
     } else {
       var old = window.localStorage.getItem(OLD_STORE_KEY);
       if (old) s.added = JSON.parse(old) || {};
@@ -277,6 +287,7 @@ function remember() {
 function undo() {
   if (!undoStack.length) return;
   state = JSON.parse(undoStack.pop());
+  if (!state.order) state.order = {};
   undoButton.disabled = !undoStack.length;
   saveState();
   render();
@@ -289,7 +300,7 @@ function resetAll() {
   );
   if (!ok) return;
   remember();
-  state = { added: {}, hidden: {} };
+  state = emptyState();
   saveState();
   render();
 }
@@ -309,7 +320,8 @@ function removeTile(item) {
   render();
 }
 
-// The built-in tiles for a page that aren't hidden, followed by the ones added on this device.
+// The built-in tiles for a page that aren't hidden, then the ones added on this device,
+// in the order a grown-up dragged them into.
 function pageItems(pageId, builtIn, color) {
   var shown = builtIn.filter(function (t) { return !isHidden(t); });
   var mine = state.added[pageId] || [];
@@ -319,8 +331,220 @@ function pageItems(pageId, builtIn, color) {
     item.key = item.id;
     item.custom = true;
   });
-  return shown.concat(mine);
+  return ordered(shown.concat(mine), pageId);
 }
+
+// Sort tiles by the saved order for this grid. Tiles it doesn't mention (new ones)
+// keep their usual place at the end.
+function ordered(items, gridId) {
+  var order = state.order[gridId];
+  if (!order) return items;
+  var pos = {};
+  order.forEach(function (key, i) { pos[key] = i; });
+  return items
+    .map(function (item, i) { return { item: item, rank: item.key in pos ? pos[item.key] : order.length + i }; })
+    .sort(function (a, b) { return a.rank - b.rank; })
+    .map(function (x) { return x.item; });
+}
+
+// After a tile is dropped somewhere new, remember the order it's now shown in.
+function saveOrder(gridId, box) {
+  var keys = Array.prototype.map.call(box.children, function (child) {
+    var tile = child.querySelector('.tile') || child;
+    return tile.getAttribute('data-key');
+  });
+  remember();
+  state.order[gridId] = keys;
+  saveState();
+  render();
+}
+
+// ---------- drag to rearrange ----------
+//
+// Used by the message pictures (drag along to move, out of the box to remove) and by
+// tiles in edit mode (touch and hold, then drag). While dragging, a copy follows the
+// finger and the item itself stays in the page as a faded gap. The other items are
+// moved around that gap, never the dragged item itself: iPhone Safari can lose track
+// of a finger if the element it started on is moved.
+//
+// cfg: kind ('chip' | 'tile'), item (element that moves), box (its container),
+//      ghostOf (element to copy, default item), hold (touch must hold still first),
+//      removable + area (dropping outside area removes it), onDrop(from, to, removed),
+//      onCancel()
+
+var drag = null;
+var suppressClick = { on: null, until: 0 }; // ignore a tap on the item just dropped
+var HOLD_MS = 220;
+
+function kids(box) { return Array.prototype.slice.call(box.children); }
+
+function armDrag(e, cfg) {
+  if (drag || e.button > 0) return;
+  var hold = !!cfg.hold && e.pointerType !== 'mouse';
+  drag = {
+    cfg: cfg, kind: cfg.kind, id: e.pointerId, hold: hold, active: false,
+    x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
+  };
+  if (hold) {
+    // a quick swipe should still scroll the page, so only pick up after holding still
+    drag.timer = setTimeout(function () { if (drag && !drag.active) activateDrag(); }, HOLD_MS);
+  } else if (e.pointerType === 'mouse') {
+    e.preventDefault(); // no text selection while dragging with a mouse
+  }
+}
+
+function activateDrag() {
+  var cfg = drag.cfg;
+  clearTimeout(drag.timer);
+  drag.active = true;
+  drag.from = kids(cfg.box).indexOf(cfg.item);
+  var source = cfg.ghostOf || cfg.item;
+  var r = source.getBoundingClientRect();
+  drag.dx = drag.x0 - r.left;
+  drag.dy = drag.y0 - r.top;
+  var ghost = source.cloneNode(true);
+  ghost.classList.remove('new');
+  ghost.classList.add('drag-ghost');
+  ghost.style.width = r.width + 'px';
+  ghost.style.height = r.height + 'px';
+  document.body.appendChild(ghost);
+  drag.ghost = ghost;
+  cfg.item.classList.add('drag-slot');
+  if (drag.hold && navigator.vibrate) navigator.vibrate(12); // a little buzz on Android
+  dragTo(drag.x, drag.y);
+}
+
+function dragTo(x, y) {
+  var cfg = drag.cfg;
+  drag.ghost.style.left = (x - drag.dx) + 'px';
+  drag.ghost.style.top = (y - drag.dy) + 'px';
+
+  if (cfg.removable) {
+    var a = cfg.area.getBoundingClientRect();
+    var pad = 14;
+    var out = x < a.left - pad || x > a.right + pad || y < a.top - pad || y > a.bottom + pad;
+    if (out !== !!drag.outside) {
+      drag.outside = out;
+      drag.ghost.classList.toggle('remove', out);
+      cfg.item.classList.toggle('leaving', out);
+    }
+    if (out) return;
+  }
+
+  // wait for items to finish sliding before checking again, so they don't flicker
+  if (Date.now() < (drag.lockUntil || 0)) return;
+  var list = kids(cfg.box);
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] === cfg.item) continue;
+    var r = list[i].getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+      moveSlot(cfg.box, cfg.item, list[i]);
+      drag.lockUntil = Date.now() + 200;
+      setTimeout(function () { if (drag && drag.active) dragTo(drag.x, drag.y); }, 210);
+      return;
+    }
+  }
+}
+
+// Move the gap to where `target` is by moving the items in between, then slide them
+// from their old spots to their new ones.
+function moveSlot(box, slot, target) {
+  var list = kids(box);
+  var from = list.indexOf(slot);
+  var to = list.indexOf(target);
+  var before = list.map(function (k) { return k.getBoundingClientRect(); });
+  var i;
+  if (to > from) {
+    for (i = from + 1; i <= to; i++) box.insertBefore(list[i], slot);
+  } else {
+    var after = slot.nextSibling;
+    for (i = to; i < from; i++) box.insertBefore(list[i], after);
+  }
+  list.forEach(function (k, j) {
+    var now = k.getBoundingClientRect();
+    var dx = before[j].left - now.left;
+    var dy = before[j].top - now.top;
+    if (!dx && !dy) return;
+    // `translate` adds to the wiggle's own transform instead of replacing it
+    k.style.transition = 'none';
+    k.style.translate = dx + 'px ' + dy + 'px';
+    void k.offsetWidth;
+    k.style.transition = 'translate 0.18s ease';
+    k.style.translate = '0px 0px';
+  });
+}
+
+function cleanupDrag(poof) {
+  var d = drag;
+  drag = null;
+  if (!d) return;
+  clearTimeout(d.timer);
+  d.cfg.item.classList.remove('drag-slot');
+  d.cfg.item.classList.remove('leaving');
+  if (d.ghost) {
+    var g = d.ghost;
+    if (poof) {
+      g.classList.add('poof');
+      setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 200);
+    } else if (g.parentNode) {
+      g.parentNode.removeChild(g);
+    }
+  }
+}
+
+function abortDrag() { cleanupDrag(false); }
+
+function endDrag(e, cancelled) {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.active) {
+    abortDrag(); // it was a tap: let the click happen as normal
+    return;
+  }
+  var d = drag;
+  var to = kids(d.cfg.box).indexOf(d.cfg.item);
+  var removed = !!d.cfg.removable && !!d.outside && !cancelled;
+  cleanupDrag(removed);
+  // letting go of a held tile can also count as tapping it; that tap shouldn't open it
+  suppressClick = { on: d.cfg.item, until: Date.now() + 600 };
+  if (cancelled) d.cfg.onCancel();
+  else if (removed || to !== d.from) d.cfg.onDrop(d.from, to, removed);
+}
+
+document.addEventListener('pointermove', function (e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  drag.x = e.clientX;
+  drag.y = e.clientY;
+  if (!drag.active) {
+    var moved = Math.abs(drag.x - drag.x0) + Math.abs(drag.y - drag.y0);
+    if (drag.hold) {
+      if (moved > 10) abortDrag(); // moved before the hold: it's a scroll
+      return;
+    }
+    if (moved < 6) return;
+    activateDrag();
+    return;
+  }
+  dragTo(drag.x, drag.y);
+});
+
+document.addEventListener('pointerup', function (e) { endDrag(e, false); });
+document.addEventListener('pointercancel', function (e) { endDrag(e, true); });
+
+// Once something is picked up, stop the finger from scrolling the page.
+document.addEventListener('touchmove', function (e) {
+  if (drag && drag.active) e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('contextmenu', function (e) {
+  if (drag) e.preventDefault(); // long-press menus
+});
+
+document.addEventListener('click', function (e) {
+  if (suppressClick.on && Date.now() < suppressClick.until && suppressClick.on.contains(e.target)) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+}, true);
 
 // ---------- the top strip ----------
 
@@ -330,7 +554,9 @@ function addPick(item) {
 }
 
 function renderStrip(animateLast) {
+  if (drag && drag.kind === 'chip') abortDrag();
   empty(sentenceEl);
+  clearButton.hidden = picks.length === 0;
 
   if (picks.length === 0) {
     var hint = el('span', 'placeholder', '👆');
@@ -346,10 +572,23 @@ function renderStrip(animateLast) {
     chip.appendChild(picture(item));
     if (item.label) chip.appendChild(el('span', 'word', item.label));
     if (animateLast && i === picks.length - 1) chip.className += ' new';
+
+    // Drag along the message to move it, or out of the box to remove it.
+    chip.addEventListener('pointerdown', function (e) {
+      armDrag(e, {
+        kind: 'chip', item: chip, box: sentenceEl, area: sentenceBox, removable: true,
+        onDrop: function (from, to, removed) {
+          var moved = picks.splice(from, 1)[0];
+          if (!removed) picks.splice(to, 0, moved);
+          renderStrip(false);
+        },
+        onCancel: function () { renderStrip(false); },
+      });
+    });
     sentenceEl.appendChild(chip);
   });
 
-  sentenceEl.scrollLeft = sentenceEl.scrollWidth;
+  sentenceEl.scrollTop = sentenceEl.scrollHeight;
 }
 
 // ---------- tiles ----------
@@ -400,11 +639,25 @@ function wiggle(tile, item) {
   return wrap;
 }
 
-function grid(items, className) {
+// gridId names the grid for remembering the order tiles are dragged into.
+function grid(items, className, gridId) {
   var box = el('div', className);
   items.forEach(function (item) {
     var tile = makeTile(item);
-    box.appendChild(editing ? wiggle(tile, item) : tile);
+    if (!editing) {
+      box.appendChild(tile);
+      return;
+    }
+    var wrap = wiggle(tile, item);
+    // Like iPhone: touch and hold a wiggling tile to pick it up, then drag it.
+    tile.addEventListener('pointerdown', function (e) {
+      armDrag(e, {
+        kind: 'tile', item: wrap, ghostOf: tile, box: box, hold: true,
+        onDrop: function () { saveOrder(gridId, box); },
+        onCancel: render,
+      });
+    });
+    box.appendChild(wrap);
   });
   return box;
 }
@@ -416,7 +669,7 @@ function showHome() {
   document.body.classList.remove('in-folder');
   document.body.style.backgroundColor = '';
   empty(view);
-  view.appendChild(grid(pageItems('home', HOME, NEUTRAL), 'grid home-grid'));
+  view.appendChild(grid(pageItems('home', HOME, NEUTRAL), 'grid home-grid', 'home'));
 }
 
 function showFolder(folder) {
@@ -428,8 +681,8 @@ function showFolder(folder) {
   var nav = el('div', 'nav');
   var home = el('button', 'home-btn');
   home.type = 'button';
-  home.setAttribute('aria-label', 'Go home');
-  home.appendChild(el('span', '', '🏠'));
+  home.setAttribute('aria-label', 'Back to the home page');
+  home.appendChild(el('span', '', '⬅️'));
   home.addEventListener('click', goHome);
 
   var here = el('div', 'here');
@@ -440,10 +693,11 @@ function showFolder(folder) {
   nav.appendChild(home);
   nav.appendChild(here);
   view.appendChild(nav);
-  view.appendChild(grid(pageItems(folder.id, folder.items, folder.color), 'grid'));
+  view.appendChild(grid(pageItems(folder.id, folder.items, folder.color), 'grid', folder.id));
 
-  var extras = (folder.extras || []).filter(function (t) { return !isHidden(t); });
-  if (extras.length) view.appendChild(grid(extras, 'extras'));
+  var extrasId = folder.id + ':extras';
+  var extras = ordered((folder.extras || []).filter(function (t) { return !isHidden(t); }), extrasId);
+  if (extras.length) view.appendChild(grid(extras, 'extras', extrasId));
 }
 
 function findFolder(id) {
@@ -460,6 +714,7 @@ function currentPage() {
 
 // Draw the current page in place (after a change, or entering/leaving edit mode).
 function render() {
+  if (drag && drag.kind === 'tile') abortDrag();
   var folder = findFolder(location.hash.slice(1));
   if (folder) showFolder(folder);
   else showHome();
@@ -1185,12 +1440,7 @@ document.getElementById('say').addEventListener('click', function () {
   speak(picks.map(function (t) { return t.say; }).join('. '));
 });
 
-document.getElementById('undo').addEventListener('click', function () {
-  picks.pop();
-  renderStrip(false);
-});
-
-document.getElementById('clear').addEventListener('click', function () {
+clearButton.addEventListener('click', function () {
   picks.length = 0;
   renderStrip(false);
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();

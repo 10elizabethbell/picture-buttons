@@ -26,22 +26,25 @@ Every tap speaks out loud and adds the picture to the strip at the top. For exam
 🍕🍎 → 🍕 → 😋 builds "I'm hungry. Pizza. Yummy." Then:
 
 - 🔊 says the whole message.
-- ⬅️ takes away the last picture. 🗑️ clears the strip.
-- 🏠, or the phone's back button, goes back home. Each folder page is tinted its own
-  colour, so the child can tell which page they're on.
+- **Drag a picture in the message** along to move it, or out of the box to take it away.
+  The **✕** at the right end of the message box clears the whole message.
+- ⬅️ at the top of a folder page, or the phone's back button, goes back home. Each
+  folder page is tinted its own colour, so the child can tell which page they're on.
 
 ## Changing the buttons (no coding)
 
-Tap **✏️ Edit** at the top right of any page and enter your 4-digit code. The first time,
-you choose the code instead. Like an iPhone home screen, every button then starts to
-wiggle and gets a **✕** in its corner. The top strip becomes a toolbar:
+Tap **✏️** next to the speaker and enter your 4-digit code. The first time, you choose
+the code instead. Like an iPhone home screen, every button then starts to wiggle and
+gets a **✕** in its corner. **Touch and hold a button, then drag it** to move it, for
+example to put the ones a child uses most near the top. With a mouse, just drag. The
+top strip becomes a toolbar:
 
 | | |
 |---|---|
 | **+ Add** | Add a button to the page you're on. |
 | **✕** on a button | Remove it. This works on built-in buttons too; they're hidden, not deleted. |
 | **↩️ Undo** | Step back one change at a time. |
-| **⚙️** | Settings: **Change the code**, or **Reset every page** back to how it started. Undo works straight after a reset. |
+| **⚙️** | Settings: **Change the code**, or **Reset every page** back to how it started (buttons, hidden buttons and order). Undo works straight after a reset. |
 | **Done** | Back to the child's view. |
 
 **Forgot the code?** Tap *Forgot the code?* on the keypad and answer a multiplication
@@ -69,8 +72,8 @@ until the page is reloaded; Reset is always available.
 
 The new button goes at the end of the page you added it from.
 
-**Where changes are kept:** added buttons (photos included) and hidden buttons are saved
-in this browser on this device. They are never uploaded. This means:
+**Where changes are kept:** added buttons (photos included), hidden buttons and the order
+you put buttons in are saved in this browser on this device. They are never uploaded. This means:
 
 - They don't appear on other devices or other browsers.
 - Clearing the browser's website data deletes them.
