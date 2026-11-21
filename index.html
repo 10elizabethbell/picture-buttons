@@ -1,15 +1,28 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <meta charset="utf-8">
   <!-- Google tag (Tag Manager container GTM-T6F5JB6T): counts visits only. Nothing a
-       family adds (photos, words, kids' names, messages) is sent with it. -->
-  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-T6F5JB6T"></script>
+       family adds (photos, words, kids' names, messages) is sent with it.
+       This site is for children (COPPA), so advertising use is switched off here, before
+       the container loads, and stays off whatever is added in Tag Manager later. -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      ad_storage: 'denied',          // no advertising cookies
+      ad_user_data: 'denied',        // no sending visit data to Google for ads
+      ad_personalization: 'denied',  // no personalised ads or remarketing
+      analytics_storage: 'granted'   // site analytics only (COPPA "internal operations")
+    });
+    gtag('set', 'ads_data_redaction', true);                 // strip ad click IDs
+    gtag('set', 'allow_google_signals', false);              // no cross-device Google signals
+    gtag('set', 'allow_ad_personalization_signals', false);
+    gtag('set', 'geo_granularity', true);                    // country/region only, not city
+    gtag('set', 'redact_device_info', true);                 // no detailed device info
     gtag('js', new Date());
   </script>
-  <meta charset="utf-8">
+  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-T6F5JB6T"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Big picture buttons for showing how you feel and what you want.">
   <title>Picture Buttons</title>

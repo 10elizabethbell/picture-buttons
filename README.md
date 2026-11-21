@@ -120,11 +120,23 @@ nine or fewer choices so it stays calm and fits on one screen.
 
 - Pictures are emoji, so they look slightly different on Apple, Android and Windows.
 - Speech uses the device's built-in English voice. It works offline once the page has loaded.
-- **Analytics:** visits are counted with Google Analytics, loaded through Google Tag
-  Manager (container `GTM-T6F5JB6T`, in the `<head>` of `index.html`). The page only
-  loads the container; which tags fire is set up in Tag Manager. Nothing a family adds is
-  sent with it: photos, words, kids' names and messages stay on the device. The site
-  still works if the tag is blocked.
+- **Analytics:** visits are counted with Google Analytics (`G-QP3FGNWH6B`), loaded
+  through Google Tag Manager (container `GTM-T6F5JB6T`, in the `<head>` of `index.html`).
+  Nothing a family adds is sent with it: photos, words, kids' names and messages stay on
+  the device. The site still works if the tag is blocked.
+- **Set up for a children's site (COPPA).** Before the container loads, the page:
+  - permanently denies advertising consent: `ad_storage`, `ad_user_data` and
+    `ad_personalization`. No ad cookies are set, and every hit is marked "no personalized
+    ads".
+  - turns off Google signals (`allow_google_signals: false`) and ad-personalization
+    signals.
+  - strips ad click IDs (`ads_data_redaction`).
+  - limits location to country or region, not city (`geo_granularity`), and drops
+    detailed device information (`redact_device_info`).
+
+  Analytics cookies (`_ga`) are still used to count visits and see how the site is used.
+  That's the COPPA "support for internal operations" use. Don't add advertising or
+  non-Google tags to the container.
 - There are no accounts.
 - The code avoids newer JavaScript so that it runs on older hand-me-down tablets.
 - This is a communication aid. It does not replace a speech-language pathologist.
